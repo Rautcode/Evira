@@ -139,9 +139,11 @@ A feature is **done** only when it is: (1) implemented against **real data** (no
 
 | Phase | Status | Exit gate met? | Date |
 |-------|--------|----------------|------|
-| 0 — Stabilize & Baseline | ⬜ Not started | — | — |
-| 1 — Security & Auth | ⬜ Not started | — | — |
-| 2 — Data & Domain | ⬜ Not started | — | — |
-| 3 — QA & Reliability | ⬜ Not started | — | — |
+| 0 — Stabilize & Baseline | ✅ Done | git baseline; backend imports; frontend builds; **live e2e 10/10** | 2026-06-15 |
+| 1 — Security & Auth | ✅ Substantially done | JWT auth on all data routers, CORS allowlist, SSRF allowlist, path-traversal guards, no leaked errors; secrets gitignored | 2026-06-15 |
+| 2 — Data & Domain | ◑ In progress | DB auto-bootstrap (D45) + demo-seed gated; **report gen validated PDF+CSV**. Remaining: Alembic migrations (D42) + port A's domain logic | — |
+| 3 — QA & Reliability | ◑ Started | `e2e_smoke.py` + `e2e_report.py` green. Remaining: pytest unit suite + CI + Playwright | — |
 | 4 — Productionize & Deploy | ⬜ Not started | — | — |
 | 5 — Launch & Handover | ⬜ Not started | — | — |
+
+**Defects:** 24 fixed (all HIGH + key MED), 3 open (D24 template escaping, D31 minor contract gaps, D42 full Alembic). See `DEFECTS.md`.
