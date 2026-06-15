@@ -173,7 +173,7 @@ def get_db():
 
 @router.get("/machines", response_model=MachineListResponse)
 @handle_db_error
-async def get_machines(conn = Depends(get_db)):
+def get_machines(conn = Depends(get_db)):
     """Get list of available machines for reporting from the connected database."""
     try:
         cursor = conn.cursor()        # Query to get all machines from the database with detailed information

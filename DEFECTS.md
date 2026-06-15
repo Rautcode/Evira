@@ -46,7 +46,7 @@
 
 | ID | Sev | Status | Issue → Fix |
 |----|-----|--------|-------------|
-| D40 | 🟠 | ⬜ | Blocking sync DB/file/matplotlib I/O inside `async def` handlers across routers → blocks event loop. → Make routes `def` (threadpool) or async drivers. |
+| D40 | 🟠 | ✅ | Blocking sync DB I/O inside `async def` handlers blocked the event loop. → Converted dashboard (`get_dashboard`, `_stats`, `_activity_feed`, `_scada_tags`) + `report.get_machines` to plain `def` (FastAPI runs them in a threadpool). `system_settings.update` stays `async` (legit `await reconnect()`); other routers were already sync. |
 | D41 | 🟠 | ✅ | `scheduler.py` started `BackgroundScheduler` at import. → Now started/stopped in app lifespan (`core/events.py`), not at import. (Multi-worker note documented: run scheduler in a single worker or external runner.) |
 | D42 | 🟠 | ◑ | `db_init_new.py` seeds tables with `random.uniform(...)`. → **Partial:** startup seed now gated behind `SEED_DEMO_DATA=1` (no auto-random-seed in prod). **Still open:** replace raw SQL init with Alembic migrations. |
 | D43 | 🟡 | ✅ | Unpinned backend deps; PyJWT + SQLAlchemy were missing entirely. → Pinned all to verified installed versions; added the two missing deps. |

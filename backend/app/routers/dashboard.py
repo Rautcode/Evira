@@ -17,7 +17,7 @@ router = APIRouter(tags=["dashboard"], prefix="/dashboard")
 
 @router.get("", response_model=SuccessResponse)  # Empty path route
 @router.get("/", response_model=SuccessResponse)  # Root path route
-async def get_dashboard():
+def get_dashboard():
     """Get basic dashboard info"""
     return SuccessResponse(
         message="Welcome to the SCADA Report Dashboard",
@@ -32,7 +32,7 @@ async def get_dashboard():
     )
 
 @router.get("/stats")
-async def get_dashboard_stats():
+def get_dashboard_stats():
     """Get all dashboard statistics in real-time"""
     try:
         # Get system status
@@ -64,7 +64,7 @@ async def get_dashboard_stats():
         raise HTTPException(status_code=500, detail="Failed to load dashboard statistics")
 
 @router.get("/activity")
-async def get_activity_feed(limit: int = Query(10, ge=1, le=100)):
+def get_activity_feed(limit: int = Query(10, ge=1, le=100)):
     """Get recent activity feed"""
     try:
         return get_recent_events(limit=limit)
@@ -73,7 +73,7 @@ async def get_activity_feed(limit: int = Query(10, ge=1, le=100)):
         raise HTTPException(status_code=500, detail="Failed to load activity feed")
 
 @router.get("/scada/tags")
-async def get_scada_tags():
+def get_scada_tags():
     """Get all discovered and configured SCADA tags from the database."""
     try:
         with get_db_connection() as conn:
