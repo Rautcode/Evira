@@ -1,0 +1,22 @@
+
+            <html>
+                <body>
+                    <h1>Test Production Report</h1>
+                    <p>Machine: {{ machine_id }}</p>
+                    <p>Shift: {{ shift }}</p>
+                    <p>Report Type: {{ report_type }}</p>
+                    <h3>Raw Telemetry Data</h3>
+                    <table border="1">
+                        <tr><th>Timestamp</th><th>Parameter</th><th>Value</th><th>Unit</th></tr>
+                        {% for row in data[:50] %}
+                        <tr>
+                            <td>{{ row.timestamp }}</td>
+                            <td>{{ row.parameter }}</td>
+                            <td>{{ row.value }}</td>
+                            <td>{{ row.unit }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </body>
+            </html>
+            

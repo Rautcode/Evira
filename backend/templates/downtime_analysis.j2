@@ -1,0 +1,11 @@
+Daily Downtime Analysis Report
+==============================
+Machine: {{ machine_id }}
+Shift: {{ shift }}
+Date Range: {{ date_range.start }} to {{ date_range.end }}
+
+Telemetry Logs:
+----------------------
+{% for row in data -%}
+- {{ row.timestamp }}: {{ row.parameter }} = {{ row.value }} {{ row.unit }} [{{ row.status }}]
+{% endfor %}

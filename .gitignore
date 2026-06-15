@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.next/
+out/
+
+# Environment & Secrets
+.env
+.env.local
+.env.production
+backend/.env
+backend/data/system_config.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backend runtime artifacts
+backend/data/jobs.sqlite
+backend/reports/*.pdf
+backend/reports/*.csv
+backend/charts/*.png
+backend/logs/
+
+# Installers (should never be committed)
+*.exe
+*.msi

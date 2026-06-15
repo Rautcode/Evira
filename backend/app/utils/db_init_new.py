@@ -1,0 +1,202 @@
+"""Database initialization and management utilities."""
+
+import os
+import logging
+from typing import List
+import pyodbc
+from app.utils.db_connector import DBConnector
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+def initialize_database():
+    """Initialize the database by running SQL setup scripts."""
+    logging.info("Starting database initialization")
+    
+    try:
+        connector = DBConnector()
+    except Exception as e:
+        logging.error(f"Failed to create database connector: {e}")
+        raise
+    
+    # Get the directory containing SQL files
+    sql_dir = os.path.dirname(os.path.abspath(__file__))
+    logging.info(f"Looking for SQL files in: {sql_dir}")
+    
+    # Define the order of SQL files to execute
+    sql_files = [
+        'init_db.sql',
+        'update_db_tables.sql'
+    ]
+    
+    try:
+        conn = connector.get_connection()
+        cursor = conn.cursor()
+        
+        for sql_file in sql_files:
+            sql_path = os.path.join(sql_dir, sql_file)
+            if not os.path.exists(sql_path):
+                logging.warning(f"SQL file not found: {sql_path}")
+                continue
+                
+            logging.info(f"Executing SQL file: {sql_file}")
+            with open(sql_path, 'r') as f:
+                sql_content = f.read()
+                
+            import re
+            # Split into batches using GO command (case-insensitive, on its own line)
+            batches = re.split(r'(?i)^\s*GO\s*$', sql_content, flags=re.MULTILINE)
+            for batch in batches:
+                batch = batch.strip()
+                if not batch:
+                    continue
+                try:
+                    cursor.execute(batch)
+                    conn.commit()
+                except Exception as e:
+                    if "There is already an object named" not in str(e):
+                        logging.error(f"Error executing statement: {e}")
+                        raise
+                        
+        logging.info("Database initialization completed successfully")
+        
+    except Exception as e:
+        logging.error(f"Error initializing database: {e}")
+        raise
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+
+def seed_test_data():
+    """Seed the database with test data for development."""
+    logging.info("Starting test data seeding")
+    connector = DBConnector()
+    
+    try:
+        conn = connector.get_connection()
+        cursor = conn.cursor()
+        
+        # Check if activity logs already have data
+        cursor.execute("SELECT COUNT(*) FROM activity_log")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+                INSERT INTO activity_log (event_type, description, severity, source)
+                VALUES 
+                ('report', 'Daily Production Report Generated', 'info', 'scheduler'),
+                ('wincc', 'Connection restored', 'success', 'system'),
+                ('user', 'New user account created', 'info', 'auth'),
+                ('error', 'Database backup failed', 'error', 'backup');
+            """)
+        
+        # Check if scheduled tasks already exist
+        cursor.execute("SELECT COUNT(*) FROM scheduled_tasks")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+                INSERT INTO scheduled_tasks (name, task_type, schedule, status)
+                VALUES 
+                ('Daily Production Report', 'report', '0 6 * * *', 'active'),
+                ('System Backup', 'backup', '0 0 * * 0', 'active'),
+                ('Data Cleanup', 'maintenance', '0 2 * * *', 'active');
+            """)
+
+        # Check if Machines are already seeded
+        cursor.execute("SELECT COUNT(*) FROM Machines")
+        if cursor.fetchone()[0] == 0:
+            logging.info("Seeding Machines data")
+            cursor.execute("""
+                INSERT INTO Machines (MachineID, MachineName, MachineType, Status, Location, Department)
+                VALUES 
+                ('M001', 'Extruder Alpha', 'Extrusion', 'active', 'Line 1, Hall A', 'Production'),
+                ('M002', 'Molding Beta', 'Injection Molding', 'active', 'Line 2, Hall A', 'Production'),
+                ('M003', 'Cooling Gamma', 'Chiller', 'active', 'Basement 1', 'Facilities'),
+                ('M004', 'Packaging Delta', 'Packaging', 'active', 'Line 1, Hall B', 'Packaging'),
+                ('M005', 'Mixer Epsilon', 'Blending', 'inactive', 'Line 3, Hall A', 'Production');
+            """)
+
+        # Seed reports history link
+        cursor.execute("SELECT COUNT(*) FROM Reports")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+                INSERT INTO Reports (MachineID, ReportType)
+                VALUES 
+                ('M001', 'production_summary'),
+                ('M001', 'downtime_analysis'),
+                ('M002', 'production_summary');
+            """)
+
+        # Seed log telemetry data for machines (extending past few days)
+        cursor.execute("SELECT COUNT(*) FROM logs")
+        if cursor.fetchone()[0] == 0:
+            logging.info("Seeding logs telemetry data")
+            import random
+            from datetime import datetime, timedelta
+            
+            shifts = ['Morning', 'Evening', 'Night']
+            params = {
+                'Extrusion': [('Temperature', 'C', 180, 220), ('Pressure', 'bar', 80, 120), ('Speed', 'RPM', 50, 75)],
+                'Injection Molding': [('Clamping Force', 'kN', 500, 600), ('Cycle Time', 's', 15, 25)],
+                'Chiller': [('Water Temp', 'C', 5, 12), ('Flow Rate', 'L/min', 100, 150)],
+                'Packaging': [('Pack Count', 'pcs', 10, 30), ('Error Rate', '%', 0, 2)],
+                'Blending': [('Mix Speed', 'RPM', 100, 200), ('Vessel Temp', 'C', 40, 60)]
+            }
+            
+            log_entries = []
+            now = datetime.now()
+            machines_data = [
+                ('M001', 'Extrusion'),
+                ('M002', 'Injection Molding'),
+                ('M003', 'Chiller'),
+                ('M004', 'Packaging')
+            ]
+            
+            for day in range(14):
+                log_date = now - timedelta(days=day)
+                for shift in shifts:
+                    for m_id, m_type in machines_data:
+                        for hour in range(3):
+                            log_time = log_date.replace(hour=8 if shift == 'Morning' else (16 if shift == 'Evening' else 0)) + timedelta(hours=hour*2)
+                            for param_name, unit, min_val, max_val in params[m_type]:
+                                val = round(random.uniform(min_val, max_val), 2)
+                                status = 'Normal'
+                                if val > max_val * 0.95 or val < min_val * 1.05:
+                                    status = 'Warning'
+                                    
+                                log_entries.append((m_id, shift, log_time, 'production_summary', param_name, val, unit, status))
+                                log_entries.append((m_id, shift, log_time, 'downtime_analysis', param_name, val, unit, status))
+                                log_entries.append((m_id, shift, log_time, 'quality_metrics', param_name, val, unit, status))
+
+            # Insert in chunks of 100
+            for i in range(0, len(log_entries), 100):
+                chunk = log_entries[i:i+100]
+                cursor.executemany("""
+                    INSERT INTO logs (machine_id, shift, timestamp, report_type, parameter, value, unit, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, chunk)
+            conn.commit()
+            logging.info(f"Seeded {len(log_entries)} logs entries")
+        
+        conn.commit()
+        logging.info("Test data seeded successfully")
+        
+    except Exception as e:
+        logging.error(f"Error seeding test data: {e}")
+        conn.rollback()
+        raise
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+
+if __name__ == "__main__":
+    try:
+        initialize_database()
+        seed_test_data()
+    except Exception as e:
+        logging.error(f"Failed to initialize database: {e}")
+        exit(1)

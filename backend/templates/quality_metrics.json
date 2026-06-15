@@ -1,0 +1,9 @@
+{
+  "name": "Quality Metrics Template",
+  "category": "Quality",
+  "description": "Analysis of production quality, reject counts, and variance.",
+  "previewUrl": "https://picsum.photos/seed/quality/300/200",
+  "content": {
+    "body": "Daily Quality Metrics Report\nMachine: {{ machine_id }}\nShift: {{ shift }}\nDate Range: {{ date_range.start }} to {{ date_range.end }}\n\nTelemetry Logs:\n{% for row in data %}- {{ row.timestamp }}: {{ row.parameter }} = {{ row.value }} {{ row.unit }} [{{ row.status }}]\n{% endfor %}"
+  }
+}

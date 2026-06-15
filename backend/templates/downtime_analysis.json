@@ -1,0 +1,9 @@
+{
+  "name": "Downtime Analysis Template",
+  "category": "Downtime",
+  "description": "Analysis of machine stop events, idle times, and warning thresholds.",
+  "previewUrl": "https://picsum.photos/seed/downtime/300/200",
+  "content": {
+    "body": "Daily Downtime Analysis Report\nMachine: {{ machine_id }}\nShift: {{ shift }}\nDate Range: {{ date_range.start }} to {{ date_range.end }}\n\nTelemetry Logs:\n{% for row in data %}- {{ row.timestamp }}: {{ row.parameter }} = {{ row.value }} {{ row.unit }} [{{ row.status }}]\n{% endfor %}"
+  }
+}

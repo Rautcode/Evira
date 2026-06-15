@@ -1,0 +1,9 @@
+{
+  "name": "Production Summary Template",
+  "category": "Production",
+  "description": "Daily production statistics, telemetry values, and machine speeds.",
+  "previewUrl": "https://picsum.photos/seed/production/300/200",
+  "content": {
+    "body": "Daily Production Summary Report\nMachine: {{ machine_id }}\nShift: {{ shift }}\nDate Range: {{ date_range.start }} to {{ date_range.end }}\n\nTelemetry Logs:\n{% for row in data %}- {{ row.timestamp }}: {{ row.parameter }} = {{ row.value }} {{ row.unit }} [{{ row.status }}]\n{% endfor %}"
+  }
+}
