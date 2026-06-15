@@ -29,9 +29,9 @@
 
 | ID | Sev | Status | File(s) | Issue → Fix |
 |----|-----|--------|---------|-------------|
-| D20 | 🟠 | ⬜ | `routers/template.py` | `delete_template` calls `save_template(id, {})` — writes an empty template instead of deleting (tombstone). → Real delete. |
+| D20 | 🟠 | ✅ | `routers/template.py` + service | `delete_template` wrote `{}` instead of deleting; `template_id` flowed into file paths (traversal). → Added `TemplateService.delete_template` (real `os.remove`) + `_path_for` id validation (`^[A-Za-z0-9_-]{1,128}$`) used by all ops; router maps `ValueError`→400, `FileNotFoundError`→404; enabled Jinja autoescape. |
 | D21 | 🟠 | ✅ | `routers/charts.py` | `d[x_field]`/`d[y_field]` → `KeyError`/500 on missing field; blank chart on empty data. → Validate non-empty + required fields present, return 400; figure closed in `finally`; switched to headless `Agg` backend. |
-| D22 | 🟠 | ⬜ | `routers/report.py` | Returns `str(e)` to clients (L117/153/222) — leaks DB schema. → Generic message + server log. Verify mangled `for`/`append` lines L177/204 parse correctly. |
+| D22 | 🟠 | ✅ | `routers/report.py` | Returned `str(e)` to clients (preview/list/machines) — leaked DB schema. → Generic messages + `logger.exception`; reformatted the mashed `for ...: machines.append(` loop for clarity. |
 | D23 | 🟠 | ⬜ | `routers/scheduler.py` | Bad cron string → unhandled 500; `remove_job` returns error with HTTP 200. → try/except → 400; proper status codes. |
 
 ## D. Frontend ↔ backend contract mismatches

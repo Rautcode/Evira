@@ -113,8 +113,9 @@ def preview_report_data(data: PreviewRequest = Body(...)):
                 "included": True
             })
         return formatted_logs
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to preview report data")
+        raise HTTPException(status_code=500, detail="Failed to preview report data")
 
 @router.get("/list")
 def list_reports():
@@ -149,8 +150,9 @@ def list_reports():
                 })
             cursor.close()
             return reports
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch report history: {str(e)}")
+    except Exception:
+        logger.exception("Failed to fetch report history")
+        raise HTTPException(status_code=500, detail="Failed to fetch report history")
 
 @router.get("/download/{file_name}")
 def download_report(file_name: str):
@@ -201,7 +203,8 @@ async def get_machines(conn = Depends(get_db)):
         
         cursor.execute(query)
         machines = []
-        for row in cursor.fetchall():            machines.append({
+        for row in cursor.fetchall():
+            machines.append({
                 "id": row.id,
                 "name": row.name,
                 "type": row.type,
@@ -219,10 +222,11 @@ async def get_machines(conn = Depends(get_db)):
             message="Successfully retrieved machine list from database",
             data={"machines": machines}
         )
-    except Exception as e:
+    except Exception:
+        logger.exception("Failed to retrieve machine list")
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to retrieve machine list: {str(e)}"
+            detail="Failed to retrieve machine list"
         )
 
 def get_machine_list():
