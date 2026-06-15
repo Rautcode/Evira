@@ -204,46 +204,79 @@ class ReportService:
         
         if data:
             df = pd.DataFrame(data)
-            total_records = len(df)
-            warnings = len(df[df['status'].str.lower().isin(['warning', 'error'])]) if 'status' in df.columns else 0
-            
-            # Draw KPI Boxes
-            pdf.set_font("helvetica", "B", 12)
-            
-            # Box 1: Total Records
-            pdf.set_fill_color(241, 245, 249)
-            pdf.set_draw_color(203, 213, 225)
-            pdf.rect(10, 45, 60, 30, 'FD')
-            pdf.set_xy(10, 50)
-            pdf.cell(60, 10, "Total Log Entries", align="C", new_x="LMARGIN", new_y="NEXT")
-            pdf.set_font("helvetica", "B", 16)
-            pdf.set_xy(10, 60)
-            pdf.cell(60, 10, str(total_records), align="C")
-            
-            # Box 2: Warning Count
-            pdf.set_font("helvetica", "B", 12)
-            pdf.set_fill_color(254, 242, 242) if warnings > 0 else pdf.set_fill_color(240, 253, 244)
-            pdf.rect(75, 45, 60, 30, 'FD')
-            pdf.set_xy(75, 50)
-            pdf.cell(60, 10, "Anomalies / Warnings", align="C", new_x="LMARGIN", new_y="NEXT")
-            pdf.set_font("helvetica", "B", 16)
-            pdf.set_text_color(220, 38, 38) if warnings > 0 else pdf.set_text_color(22, 163, 74)
-            pdf.set_xy(75, 60)
-            pdf.cell(60, 10, str(warnings), align="C")
-            
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_y(90)
-            
-            # Parameter Averages
-            pdf.set_font("helvetica", "B", 14)
-            pdf.cell(0, 10, "Parameter Averages", new_x="LMARGIN", new_y="NEXT")
-            pdf.set_font("helvetica", "", 10)
-            if 'value' in df.columns and 'parameter' in df.columns:
+            if 'value' in df.columns:
                 df['value'] = pd.to_numeric(df['value'], errors='coerce')
-                avgs = df.groupby('parameter')['value'].mean().reset_index()
-                for _, row in avgs.iterrows():
-                    unit = df[df['parameter'] == row['parameter']]['unit'].iloc[0] if 'unit' in df.columns else ''
-                    pdf.cell(0, 8, f"  - {row['parameter']}: {row['value']:.2f} {unit}", new_x="LMARGIN", new_y="NEXT")
+            total_records = len(df)
+            warnings = int(df['status'].str.lower().isin(['warning', 'error']).sum()) if 'status' in df.columns else 0
+            normal_rate = (1 - warnings / total_records) * 100 if total_records else 0.0
+            n_params = int(df['parameter'].nunique()) if 'parameter' in df.columns else 0
+
+            # KPI grid: four cards across the page
+            cards = [
+                ("Total Log Entries", str(total_records), (15, 23, 42)),
+                ("Anomalies / Warnings", str(warnings), (220, 38, 38) if warnings else (22, 163, 74)),
+                ("Normal Rate", f"{normal_rate:.1f}%", (22, 163, 74) if normal_rate >= 90 else (202, 138, 4)),
+                ("Parameters Tracked", str(n_params), (15, 23, 42)),
+            ]
+            card_w, card_h, gap, x0, y0 = 44, 28, 4, 10, 40
+            for i, (label, value, color) in enumerate(cards):
+                x = x0 + i * (card_w + gap)
+                pdf.set_fill_color(241, 245, 249)
+                pdf.set_draw_color(203, 213, 225)
+                pdf.rect(x, y0, card_w, card_h, 'FD')
+                pdf.set_xy(x, y0 + 4)
+                pdf.set_text_color(100, 116, 139)
+                pdf.set_font("helvetica", "B", 8)
+                pdf.multi_cell(card_w, 4, label.upper(), align="C")
+                pdf.set_xy(x, y0 + 16)
+                pdf.set_text_color(*color)
+                pdf.set_font("helvetica", "B", 20)
+                pdf.cell(card_w, 8, value, align="C")
+
+            pdf.set_text_color(0, 0, 0)
+            pdf.set_y(y0 + card_h + 12)
+
+            # Parameter statistics table (count / min / avg / max per parameter)
+            pdf.set_font("helvetica", "B", 14)
+            pdf.cell(0, 10, "Parameter Statistics", new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(1)
+            if 'value' in df.columns and 'parameter' in df.columns:
+                stats = df.groupby('parameter')['value'].agg(['count', 'min', 'mean', 'max']).reset_index()
+                widths = [55, 25, 30, 30, 30, 20]
+                headers = ["Parameter", "Count", "Min", "Average", "Max", "Unit"]
+                pdf.set_fill_color(30, 64, 175)
+                pdf.set_text_color(255, 255, 255)
+                pdf.set_font("helvetica", "B", 10)
+                for w, htxt in zip(widths, headers):
+                    pdf.cell(w, 8, htxt, border=1, fill=True, align="C")
+                pdf.ln()
+                pdf.set_text_color(0, 0, 0)
+                pdf.set_font("helvetica", "", 10)
+                fill = False
+                for _, row in stats.iterrows():
+                    unit = ''
+                    if 'unit' in df.columns:
+                        us = df[df['parameter'] == row['parameter']]['unit']
+                        unit = str(us.iloc[0]) if len(us) else ''
+                    pdf.set_fill_color(248, 250, 252) if fill else pdf.set_fill_color(255, 255, 255)
+                    pdf.cell(widths[0], 8, str(row['parameter']), border=1, fill=fill)
+                    pdf.cell(widths[1], 8, str(int(row['count'])), border=1, fill=fill, align="C")
+                    pdf.cell(widths[2], 8, f"{row['min']:.2f}", border=1, fill=fill, align="R")
+                    pdf.cell(widths[3], 8, f"{row['mean']:.2f}", border=1, fill=fill, align="R")
+                    pdf.cell(widths[4], 8, f"{row['max']:.2f}", border=1, fill=fill, align="R")
+                    pdf.cell(widths[5], 8, unit, border=1, fill=fill, align="C")
+                    pdf.ln()
+                    fill = not fill
+
+            # Context strip
+            pdf.ln(6)
+            dr = context.get('date_range', {})
+            pdf.set_font("helvetica", "I", 9)
+            pdf.set_text_color(100, 116, 139)
+            pdf.cell(0, 6, f"Reporting period: {dr.get('start', 'N/A')} to {dr.get('end', 'N/A')}    |    "
+                            f"Machine: {context.get('machine_id', 'All')}    |    Shift: {context.get('shift', 'All')}",
+                     new_x="LMARGIN", new_y="NEXT")
+            pdf.set_text_color(0, 0, 0)
         else:
             pdf.set_font("helvetica", "", 12)
             pdf.cell(0, 10, "No data available for the selected timeframe.", new_x="LMARGIN", new_y="NEXT")
