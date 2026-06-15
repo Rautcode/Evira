@@ -47,6 +47,8 @@
 | ID | Sev | Status | Issue → Fix |
 |----|-----|--------|-------------|
 | D45 | 🟠 | ✅ | App could not bootstrap a fresh SQL Server: `initialize_database()` connected straight to `scada_reports`, which doesn't exist on a new server. → Added `ensure_database_exists()` (connects to `master`, creates the DB if missing, with a safe-identifier guard) called at the start of init. Found while attempting the live end-to-end run. |
+| D48 | 🟠 | ✅ | Frontend Docker build failed (`Cannot find module 'autoprefixer'`): `ENV NODE_ENV=production` was set before `npm ci`, so devDependencies were skipped. → Install all deps first; set `NODE_ENV=production` only for the runtime stage. Found during the containerized build. |
+| D49 | 🟠 | ✅ | Backend Docker build failed (apt exit 100): `python:3.13-slim` moved to Debian 13 (trixie) but the Microsoft ODBC repo URL targets `debian/12`. → Pin base image to `python:3.13-slim-bookworm`. |
 | D46 | 🔴 | ✅ | **Startup/shutdown events never ran.** `add_event_handler("startup", lambda: startup_event(app))` registered a *sync* lambda returning a coroutine that Starlette never awaited → DB init, seeding, and scheduler start silently never happened (`RuntimeWarning: coroutine was never awaited`). → Registered proper `async` `@app.on_event` handlers. Caught by the live smoke test. |
 | D47 | 🟠 | ✅ | `MSSQL_ALLOWED_SERVERS` (D14) split on comma, but SQL Server addresses use `host,port` (`localhost,1433`) → a comma-port server never matched its own allowlist. → Split on `;`/newline instead. |
 

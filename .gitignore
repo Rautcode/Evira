@@ -43,3 +43,4 @@ backend/_type_*.pdf
 # Installers (should never be committed)
 *.exe
 *.msi
+stack_report.pdf
