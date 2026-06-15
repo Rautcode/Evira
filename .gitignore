@@ -37,6 +37,8 @@ backend/reports/*.csv
 backend/charts/*.png
 backend/logs/
 backend/e2e_report_out.pdf
+backend/_*.png
+backend/_type_*.pdf
 
 # Installers (should never be committed)
 *.exe

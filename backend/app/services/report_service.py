@@ -130,9 +130,95 @@ class ReportService:
         plt.close()
         return chart_path
 
-    def generate_pdf(self, context: dict, pdf_path: str, chart_path: str = None):
+    # Default per-report-type layout. A template JSON may override any of these
+    # keys via a "layout" block (no-code customization).
+    DEFAULT_LAYOUTS = {
+        "production_summary": {"title": "Production Summary", "accent": [30, 64, 175], "analytics": "standard"},
+        "downtime_analysis": {"title": "Downtime Analysis", "accent": [180, 83, 9], "analytics": "pareto"},
+        "quality_metrics": {"title": "Quality Metrics", "accent": [22, 101, 52], "analytics": "spc"},
+    }
+
+    def resolve_layout(self, template_id: str, report_type: str) -> dict:
+        base = dict(self.DEFAULT_LAYOUTS.get(report_type, self.DEFAULT_LAYOUTS["production_summary"]))
+        try:
+            from app.services.template_service import TemplateService
+            tpl = TemplateService().load_template(template_id)
+            layout = tpl.get("layout") or (tpl.get("content") or {}).get("layout")
+            if isinstance(layout, dict):
+                for k in ("title", "accent", "analytics"):
+                    if k in layout:
+                        base[k] = layout[k]
+        except Exception as e:
+            logger.debug(f"No template layout override for {template_id}: {e}")
+        return base
+
+    def generate_pareto_chart(self, data: List[Dict[str, Any]], chart_path: str) -> str:
+        """Downtime: Pareto of warning/error counts by parameter (bars + cumulative %)."""
+        df = pd.DataFrame(data)
+        if df.empty or "status" not in df.columns or "parameter" not in df.columns:
+            return ""
+        warn = df[df["status"].astype(str).str.lower().isin(["warning", "error"])]
+        if warn.empty:
+            return ""
+        counts = warn["parameter"].value_counts()
+        cum = counts.cumsum() / counts.sum() * 100
+        labels = counts.index.astype(str)
+        fig, ax1 = plt.subplots(figsize=(12, 5))
+        ax1.bar(labels, counts.values, color="#B45309")
+        ax1.set_ylabel("Warning Count")
+        ax1.set_title("Downtime Pareto - Warnings by Parameter", fontsize=12, fontweight="bold")
+        ax1.tick_params(axis="x", rotation=30)
+        ax2 = ax1.twinx()
+        ax2.plot(labels, cum.values, color="#DC2626", marker="o", linewidth=2)
+        ax2.axhline(80, color="gray", linestyle="--", alpha=0.6)
+        ax2.set_ylabel("Cumulative %")
+        ax2.set_ylim(0, 110)
+        plt.tight_layout()
+        plt.savefig(chart_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        return chart_path
+
+    def generate_spc_chart(self, data: List[Dict[str, Any]], chart_path: str) -> str:
+        """Quality: SPC control charts (value vs time with mean and +/-3 sigma limits)."""
+        df = pd.DataFrame(data)
+        if df.empty or not {"value", "parameter", "timestamp"} <= set(df.columns):
+            return ""
+        df["timestamp"] = pd.to_datetime(df["timestamp"])
+        df["value"] = pd.to_numeric(df["value"], errors="coerce")
+        params = [p for p in df["parameter"].dropna().unique()][:3]
+        if not params:
+            return ""
+        fig, axes = plt.subplots(len(params), 1, figsize=(12, 3.2 * len(params)), squeeze=False)
+        for ax, param in zip(axes[:, 0], params):
+            pdat = df[df["parameter"] == param].sort_values("timestamp")
+            vals = pdat["value"]
+            mean, std = vals.mean(), vals.std(ddof=0)
+            ucl, lcl = mean + 3 * std, mean - 3 * std
+            ax.plot(pdat["timestamp"], vals, color="#166534", marker="o", markersize=2, linewidth=1)
+            ax.axhline(mean, color="green", linewidth=1, label=f"Mean {mean:.1f}")
+            ax.axhline(ucl, color="red", linestyle="--", linewidth=1, label=f"UCL {ucl:.1f}")
+            ax.axhline(lcl, color="red", linestyle="--", linewidth=1, label=f"LCL {lcl:.1f}")
+            oob = pdat[(vals > ucl) | (vals < lcl)]
+            if not oob.empty:
+                ax.scatter(oob["timestamp"], oob["value"], color="red", zorder=5, s=20)
+            ax.set_title(f"SPC Control Chart - {param}", fontsize=11, fontweight="bold")
+            ax.legend(fontsize=7, loc="upper right")
+            ax.grid(True, linestyle="--", alpha=0.5)
+        plt.tight_layout()
+        plt.savefig(chart_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        return chart_path
+
+    def generate_pdf(self, context: dict, pdf_path: str, chart_path: str = None, layout: dict = None):
         data = context.get('data', [])
-        
+        layout = layout or {}
+        accent = tuple(layout.get('accent', [30, 64, 175]))
+        report_title = layout.get('title') or context.get('report_type', 'System').replace('_', ' ').title()
+        analytics_heading = {
+            'pareto': 'Downtime Pareto Analysis',
+            'spc': 'Quality Control (SPC)',
+        }.get(layout.get('analytics'), 'Visual Analytics')
+
         class EnterpriseSCADAPDF(FPDF):
             def header(self):
                 # We don't want a generic header on the cover page
@@ -172,25 +258,34 @@ class ReportService:
         pdf.add_page()
         
         # --- 1. COVER PAGE ---
-        pdf.set_fill_color(30, 64, 175) # Deep Blue Box
+        pdf.set_fill_color(*accent)
         pdf.rect(0, 0, 210, 297, 'F')
-        
+        # Darker band at the very top for depth
+        pdf.set_fill_color(max(accent[0] - 18, 0), max(accent[1] - 18, 0), max(accent[2] - 18, 0))
+        pdf.rect(0, 0, 210, 8, 'F')
+
         pdf.set_text_color(255, 255, 255)
-        pdf.set_y(80)
-        pdf.set_font("helvetica", "B", 36)
-        report_title = context.get('report_type', 'System').replace('_', ' ').title()
-        pdf.cell(0, 15, f"{report_title} Report", align="C", new_x="LMARGIN", new_y="NEXT")
-        
+        pdf.set_y(68)
+        pdf.set_font("helvetica", "", 12)
+        pdf.cell(0, 8, "SCADA ASSISTANT  -  ENTERPRISE TELEMETRY REPORT", align="C", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_y(82)
+        pdf.set_font("helvetica", "B", 34)
+        pdf.cell(0, 15, report_title, align="C", new_x="LMARGIN", new_y="NEXT")
+        # Divider rule under the title
+        pdf.set_draw_color(255, 255, 255)
+        pdf.set_line_width(0.5)
+        pdf.line(65, 105, 145, 105)
+
         pdf.set_font("helvetica", "", 14)
-        pdf.set_y(105)
+        pdf.set_y(114)
         pdf.cell(0, 10, f"Machine Target: {context.get('machine_id', 'All')}", align="C", new_x="LMARGIN", new_y="NEXT")
         pdf.cell(0, 10, f"Shift Segment: {context.get('shift', 'All')}", align="C", new_x="LMARGIN", new_y="NEXT")
-        
+
         date_range = context.get('date_range', {})
         pdf.set_font("helvetica", "I", 12)
-        pdf.set_y(130)
+        pdf.set_y(142)
         pdf.cell(0, 10, f"Data Period: {date_range.get('start', 'N/A')} to {date_range.get('end', 'N/A')}", align="C", new_x="LMARGIN", new_y="NEXT")
-        
+
         pdf.set_y(250)
         pdf.set_font("helvetica", "", 10)
         pdf.cell(0, 10, "Generated by SCADA Assistant Enterprise Engine", align="C", new_x="LMARGIN", new_y="NEXT")
@@ -244,7 +339,7 @@ class ReportService:
                 stats = df.groupby('parameter')['value'].agg(['count', 'min', 'mean', 'max']).reset_index()
                 widths = [55, 25, 30, 30, 30, 20]
                 headers = ["Parameter", "Count", "Min", "Average", "Max", "Unit"]
-                pdf.set_fill_color(30, 64, 175)
+                pdf.set_fill_color(*accent)
                 pdf.set_text_color(255, 255, 255)
                 pdf.set_font("helvetica", "B", 10)
                 for w, htxt in zip(widths, headers):
@@ -285,7 +380,7 @@ class ReportService:
         if chart_path and os.path.exists(chart_path):
             pdf.add_page()
             pdf.set_font("helvetica", "B", 18)
-            pdf.cell(0, 10, "Visual Analytics", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 10, analytics_heading, new_x="LMARGIN", new_y="NEXT")
             pdf.ln(5)
             pdf.image(chart_path, x=10, w=190)
 
@@ -297,7 +392,7 @@ class ReportService:
             pdf.ln(5)
             
             # Table Header
-            pdf.set_fill_color(30, 64, 175)
+            pdf.set_fill_color(*accent)
             pdf.set_text_color(255, 255, 255)
             pdf.set_font("helvetica", "B", 10)
             pdf.cell(45, 8, "Timestamp", border=1, fill=True)
@@ -354,16 +449,31 @@ class ReportService:
             "report_type": report_type
         }
         
+        # Resolve the layout (per report type, overridable by the template JSON).
+        layout = self.resolve_layout(template_id, report_type)
+
         file_id = f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         if with_chart:
             chart_path = os.path.join(REPORTS_DIR, f"{file_id}_chart.png")
-            self.generate_chart(data_res["raw"], chart_path)
+            # Pick the analytics chart appropriate to the report type.
+            analytics = layout.get("analytics", "standard")
+            if analytics == "pareto":
+                produced = self.generate_pareto_chart(data_res["raw"], chart_path)
+            elif analytics == "spc":
+                produced = self.generate_spc_chart(data_res["raw"], chart_path)
+            else:
+                produced = self.generate_chart(data_res["raw"], chart_path)
+            # Fall back to the standard overview chart if the type-specific one
+            # had no qualifying data (e.g. no warnings for a Pareto).
+            if not produced:
+                produced = self.generate_chart(data_res["raw"], chart_path)
+            chart_path = produced or None
         else:
             chart_path = None
-            
+
         if output_type == 'pdf':
             pdf_path = os.path.join(REPORTS_DIR, f"{file_id}.pdf")
-            self.generate_pdf(context, pdf_path, chart_path)
+            self.generate_pdf(context, pdf_path, chart_path, layout=layout)
             return pdf_path
         else:
             csv_path = os.path.join(REPORTS_DIR, f"{file_id}.csv")
