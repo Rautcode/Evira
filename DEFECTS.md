@@ -42,6 +42,12 @@
 | D30 | 🟠 | ✅ | Frontend calls `GET /auth/me` + `POST /auth/logout`; backend had `/auth/verify` and no logout. → Added `/auth/me` + stateless `/auth/logout`; `verify` now reuses shared `decode_token`. |
 | D31 | 🟡 | ⬜ | Frontend `GET /logger/{id}` and `GET /charts/` have no matching backend routes (backend has `/logger/download`,`/activity`; `/charts/generate`). → Reconcile. |
 
+## F. Deployment / bootstrap
+
+| ID | Sev | Status | Issue → Fix |
+|----|-----|--------|-------------|
+| D45 | 🟠 | ✅ | App could not bootstrap a fresh SQL Server: `initialize_database()` connected straight to `scada_reports`, which doesn't exist on a new server. → Added `ensure_database_exists()` (connects to `master`, creates the DB if missing, with a safe-identifier guard) called at the start of init. Found while attempting the live end-to-end run. |
+
 ## E. Architecture / performance / hygiene
 
 | ID | Sev | Status | Issue → Fix |

@@ -1,21 +1,49 @@
 """Database initialization and management utilities."""
 
 import os
+import re
 import logging
 from typing import List
 import pyodbc
 from app.utils.db_connector import DBConnector
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+logger = logging.getLogger(__name__)
+
+# Database name must be a safe identifier (used in a CREATE DATABASE statement,
+# which cannot be parameterized).
+_VALID_DB_NAME = re.compile(r'^[A-Za-z_][A-Za-z0-9_]{0,127}$')
+
+
+def ensure_database_exists():
+    """Create the target database if it does not exist yet.
+
+    The app connects directly to MSSQL_DATABASE, but on a fresh SQL Server that
+    database won't exist. Connect to `master` first and create it so the app can
+    bootstrap a brand-new server.
+    """
+    db_name = os.getenv("MSSQL_DATABASE", "scada_reports")
+    if not _VALID_DB_NAME.match(db_name):
+        raise ValueError(f"Unsafe MSSQL_DATABASE name: {db_name!r}")
+
+    master = DBConnector(database="master")
+    conn = master.get_connection()
+    try:
+        conn.autocommit = True  # CREATE DATABASE cannot run inside a transaction
+        cursor = conn.cursor()
+        cursor.execute(f"IF DB_ID('{db_name}') IS NULL CREATE DATABASE [{db_name}];")
+        cursor.close()
+        logger.info("Ensured database '%s' exists", db_name)
+    finally:
+        conn.close()
+
 
 def initialize_database():
     """Initialize the database by running SQL setup scripts."""
     logging.info("Starting database initialization")
-    
+
+    # Bootstrap: make sure the target database exists before connecting to it.
+    ensure_database_exists()
+
     try:
         connector = DBConnector()
     except Exception as e:
