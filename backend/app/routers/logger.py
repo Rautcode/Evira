@@ -17,21 +17,42 @@ if not os.path.exists(LOGS_DIR):
 
 logging.basicConfig(filename=LOG_FILE, level=logging.INFO)
 
+MAX_LOG_ENTRY_BYTES = 16 * 1024  # cap a single entry to prevent disk abuse
+
 @router.post("/log")
 def write_log(entry: dict = Body(...)):
-    # Accepts structured log entries
-    with open(LOG_FILE, 'a') as f:
-        f.write(json.dumps(entry) + "\n")
+    # Accepts structured log entries (a JSON object).
+    serialized = json.dumps(entry, default=str)
+    if len(serialized.encode("utf-8")) > MAX_LOG_ENTRY_BYTES:
+        raise HTTPException(status_code=413, detail="Log entry too large")
+    try:
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(serialized + "\n")
+    except OSError:
+        logging.exception("Failed to write log entry")
+        raise HTTPException(status_code=500, detail="Failed to write log entry")
     return {"message": "Log entry added."}
 
 @router.get("/")
-def get_logs(limit: Optional[int] = 100):
-    # Return the last N log entries
+def get_logs(limit: int = Query(100, ge=1, le=1000)):
+    # Return the last N log entries, skipping any corrupt lines.
     if not os.path.exists(LOG_FILE):
         return {"logs": []}
-    with open(LOG_FILE, 'r') as f:
-        lines = f.readlines()[-limit:]
-        logs = [json.loads(line) for line in lines]
+    try:
+        with open(LOG_FILE, "r", encoding="utf-8") as f:
+            lines = f.readlines()[-limit:]
+    except OSError:
+        logging.exception("Failed to read log file")
+        raise HTTPException(status_code=500, detail="Failed to read logs")
+    logs = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            logs.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
     return {"logs": logs}
 
 @router.get("/download")

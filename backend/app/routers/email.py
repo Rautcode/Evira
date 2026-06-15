@@ -1,12 +1,24 @@
 from fastapi import APIRouter, BackgroundTasks, Body, HTTPException
-from pydantic import BaseModel, EmailStr
-from app.services.emailer import send_email
-from typing import Optional, List
+from pydantic import BaseModel
+from typing import Optional
 import logging
+import os
+
+from email_validator import validate_email, EmailNotValidError
+from app.utils.safe_paths import is_within_any
 
 router = APIRouter(tags=["email"], prefix="/email")
 
 from app.services.email_service import email_service
+
+# Attachments may only come from the app's own generated-output directories,
+# never arbitrary paths on disk (prevents exfiltration of e.g. /etc/passwd).
+_BACKEND_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+ALLOWED_ATTACHMENT_DIRS = [
+    os.path.join(_BACKEND_ROOT, "reports"),
+    os.path.join(_BACKEND_ROOT, "charts"),
+    os.path.join(_BACKEND_ROOT, "outputs"),
+]
 
 class EmailRequest(BaseModel):
     to: str
@@ -45,8 +57,26 @@ def send_email_route(
     data: EmailRequest = Body(...),
     background_tasks: BackgroundTasks = None
 ):
+    # Validate recipients up front so the caller gets a real error, not a
+    # silent background failure.
+    raw_recipients = [r.strip() for r in data.to.split(",") if r.strip()]
+    if not raw_recipients:
+        raise HTTPException(status_code=400, detail="At least one recipient is required")
+    recipients = []
+    for r in raw_recipients:
+        try:
+            recipients.append(validate_email(r, check_deliverability=False).normalized)
+        except EmailNotValidError:
+            raise HTTPException(status_code=400, detail=f"Invalid email address: {r}")
+
+    # An attachment, if provided, must live inside an allowed output directory.
+    if data.attachment_path:
+        if not os.path.isfile(data.attachment_path) or not is_within_any(
+            data.attachment_path, ALLOWED_ATTACHMENT_DIRS
+        ):
+            raise HTTPException(status_code=400, detail="Invalid or disallowed attachment path")
+
     def send_and_log():
-        recipients = [r.strip() for r in data.to.split(",") if r.strip()]
         for recipient in recipients:
             result = email_service.send_email(
                 subject=data.subject,

@@ -18,9 +18,9 @@
 | ID | Sev | Status | File(s) | Issue → Fix |
 |----|-----|--------|---------|-------------|
 | D10 | 🔴 | ✅ | all routers | **No endpoint enforced auth** despite JWT machinery in `auth.py`. → Added `app/core/security.py` (`get_current_user`); applied `dependencies=[Depends(get_current_user)]` centrally in `main.py` to all data routers (36 routes now require a Bearer token). Auth + websocket stay public. |
-| D11 | 🔴 | ⬜ | `routers/email.py` | `POST /email/send` is unauthenticated and `attachment_path` is caller-controlled → arbitrary file exfiltration. → Require auth + validate/whitelist attachment path. |
-| D12 | 🔴 | ⬜ | `routers/charts.py` | `GET /charts/download/{file_name}` has no path-traversal guard (`../../` escapes `CHARTS_DIR`). → Apply realpath/startswith check (pattern already in report.py). |
-| D13 | 🔴 | ⬜ | `routers/logger.py` | `POST /logger/log` writes arbitrary client JSON to disk, no auth → log injection / disk exhaustion. → Auth + size/shape validation. |
+| D11 | 🔴 | ✅ | `routers/email.py` | `POST /email/send` arbitrary `attachment_path` → exfiltration. → Now auth-required (D10) + attachments restricted to allowed output dirs (`reports`/`charts`/`outputs`) via `is_within_any`; recipients validated with `email_validator`. |
+| D12 | 🔴 | ✅ | `routers/charts.py` | `GET /charts/download/{file_name}` path traversal. → `resolve_within(CHARTS_DIR, file_name)` rejects `..`/absolute escapes (new `app/utils/safe_paths.py`). |
+| D13 | 🔴 | ✅ | `routers/logger.py` | `POST /logger/log` arbitrary write. → Auth-required (D10) + 16 KB entry cap, per-line JSON guard, `limit` clamped `1..1000`, OSError handled. |
 | D14 | 🟠 | ⬜ | `routers/auth.py` | `validate_sql_login` connects to a caller-supplied `server`/`database` → SSRF / credential probing. → Restrict to a configured allowlist. |
 | D15 | 🟠 | ⬜ | `routers/websocket.py` | WS endpoints have no token check on connect; also URL built from `window.location.host` (frontend), not the backend. → Add WS auth; fix client base URL. |
 | D16 | 🟠 | ✅ | `main.py` | `CORS allow_origins=["*"]`. → Env-driven allowlist via `CORS_ALLOW_ORIGINS` (default `http://localhost:3000`). |
@@ -30,7 +30,7 @@
 | ID | Sev | Status | File(s) | Issue → Fix |
 |----|-----|--------|---------|-------------|
 | D20 | 🟠 | ⬜ | `routers/template.py` | `delete_template` calls `save_template(id, {})` — writes an empty template instead of deleting (tombstone). → Real delete. |
-| D21 | 🟠 | ⬜ | `routers/charts.py` | `d[x_field]`/`d[y_field]` → `KeyError`/500 on missing field; blank chart on empty data. → Validate fields + non-empty, return 400. |
+| D21 | 🟠 | ✅ | `routers/charts.py` | `d[x_field]`/`d[y_field]` → `KeyError`/500 on missing field; blank chart on empty data. → Validate non-empty + required fields present, return 400; figure closed in `finally`; switched to headless `Agg` backend. |
 | D22 | 🟠 | ⬜ | `routers/report.py` | Returns `str(e)` to clients (L117/153/222) — leaks DB schema. → Generic message + server log. Verify mangled `for`/`append` lines L177/204 parse correctly. |
 | D23 | 🟠 | ⬜ | `routers/scheduler.py` | Bad cron string → unhandled 500; `remove_job` returns error with HTTP 200. → try/except → 400; proper status codes. |
 
