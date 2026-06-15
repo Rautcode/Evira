@@ -38,67 +38,19 @@ def ensure_database_exists():
 
 
 def initialize_database():
-    """Initialize the database by running SQL setup scripts."""
+    """Initialize the database: ensure it exists, then apply Alembic migrations.
+
+    Schema is now managed by versioned migrations (migrations/versions) instead
+    of ad-hoc raw SQL execution, so it is deterministic and auditable (D42).
+    """
     logging.info("Starting database initialization")
 
     # Bootstrap: make sure the target database exists before connecting to it.
     ensure_database_exists()
 
-    try:
-        connector = DBConnector()
-    except Exception as e:
-        logging.error(f"Failed to create database connector: {e}")
-        raise
-    
-    # Get the directory containing SQL files
-    sql_dir = os.path.dirname(os.path.abspath(__file__))
-    logging.info(f"Looking for SQL files in: {sql_dir}")
-    
-    # Define the order of SQL files to execute
-    sql_files = [
-        'init_db.sql',
-        'update_db_tables.sql'
-    ]
-    
-    try:
-        conn = connector.get_connection()
-        cursor = conn.cursor()
-        
-        for sql_file in sql_files:
-            sql_path = os.path.join(sql_dir, sql_file)
-            if not os.path.exists(sql_path):
-                logging.warning(f"SQL file not found: {sql_path}")
-                continue
-                
-            logging.info(f"Executing SQL file: {sql_file}")
-            with open(sql_path, 'r') as f:
-                sql_content = f.read()
-                
-            import re
-            # Split into batches using GO command (case-insensitive, on its own line)
-            batches = re.split(r'(?i)^\s*GO\s*$', sql_content, flags=re.MULTILINE)
-            for batch in batches:
-                batch = batch.strip()
-                if not batch:
-                    continue
-                try:
-                    cursor.execute(batch)
-                    conn.commit()
-                except Exception as e:
-                    if "There is already an object named" not in str(e):
-                        logging.error(f"Error executing statement: {e}")
-                        raise
-                        
-        logging.info("Database initialization completed successfully")
-        
-    except Exception as e:
-        logging.error(f"Error initializing database: {e}")
-        raise
-    finally:
-        if 'cursor' in locals():
-            cursor.close()
-        if 'conn' in locals():
-            conn.close()
+    from app.utils.migrations import run_migrations
+    run_migrations()
+    logging.info("Database initialization completed successfully")
 
 def seed_test_data():
     """Seed the database with test data for development."""

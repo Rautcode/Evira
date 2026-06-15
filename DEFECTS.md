@@ -56,7 +56,7 @@
 |----|-----|--------|-------------|
 | D40 | 🟠 | ✅ | Blocking sync DB I/O inside `async def` handlers blocked the event loop. → Converted dashboard (`get_dashboard`, `_stats`, `_activity_feed`, `_scada_tags`) + `report.get_machines` to plain `def` (FastAPI runs them in a threadpool). `system_settings.update` stays `async` (legit `await reconnect()`); other routers were already sync. |
 | D41 | 🟠 | ✅ | `scheduler.py` started `BackgroundScheduler` at import. → Now started/stopped in app lifespan (`core/events.py`), not at import. (Multi-worker note documented: run scheduler in a single worker or external runner.) |
-| D42 | 🟠 | ◑ | `db_init_new.py` seeds tables with `random.uniform(...)`. → **Partial:** startup seed now gated behind `SEED_DEMO_DATA=1` (no auto-random-seed in prod). **Still open:** replace raw SQL init with Alembic migrations. |
+| D42 | 🟠 | ✅ | `db_init_new.py` seeded tables with `random.uniform(...)` and used ad-hoc raw-SQL init. → Demo seed gated behind `SEED_DEMO_DATA=1`; schema now managed by **Alembic** (`migrations/`, revision `0001_initial_schema`), applied on startup via `run_migrations()`. Verified: dropped DB → migrations recreate all 8 tables + 3 procs + `alembic_version`; e2e still 10/10. |
 | D43 | 🟡 | ✅ | Unpinned backend deps; PyJWT + SQLAlchemy were missing entirely. → Pinned all to verified installed versions; added the two missing deps. |
 | D44 | 🟡 | ✅ | Conflicting `basicConfig` calls in scheduler.py + logger.py. → Removed both; central logging owned by `app.main`; modules use `getLogger(__name__)`. |
 
