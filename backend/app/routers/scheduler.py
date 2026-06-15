@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, HTTPException
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.triggers.cron import CronTrigger
@@ -101,8 +101,14 @@ def list_jobs():
 @router.post("/")
 def add_job(data: ScheduleRequest = Body(...)):
     job_id = str(uuid.uuid4())
-    trigger = CronTrigger.from_crontab(data.cron_expression)
-    
+    try:
+        trigger = CronTrigger.from_crontab(data.cron_expression)
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid cron expression: '{data.cron_expression}'",
+        )
+
     args = [job_id, data.title, data.template_id, data.machine_id, data.report_type, data.recipients]
     
     scheduler.add_job(
@@ -118,10 +124,12 @@ def add_job(data: ScheduleRequest = Body(...)):
 
 @router.delete("/{job_id}")
 def remove_job(job_id: str):
+    if not scheduler.get_job(job_id):
+        raise HTTPException(status_code=404, detail="Job not found")
     try:
-        if scheduler.get_job(job_id):
-            scheduler.remove_job(job_id)
-        logging.info(f"[Job {job_id}] Removed")
-        return {"message": "Job removed"}
-    except Exception as e:
-        return {"error": str(e)}
+        scheduler.remove_job(job_id)
+    except Exception:
+        logging.exception(f"[Job {job_id}] Failed to remove")
+        raise HTTPException(status_code=500, detail="Failed to remove job")
+    logging.info(f"[Job {job_id}] Removed")
+    return {"message": "Job removed"}

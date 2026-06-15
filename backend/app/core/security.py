@@ -55,3 +55,14 @@ def get_current_user(
     if credentials is None or not credentials.credentials:
         raise _CREDENTIALS_EXC
     return decode_token(credentials.credentials)
+
+
+def verify_ws_token(token: str | None) -> Dict[str, Any] | None:
+    """Validate a WebSocket token (passed as a query param, since browsers
+    cannot set an Authorization header on WS). Returns claims or None."""
+    if not token:
+        return None
+    try:
+        return decode_token(token)
+    except HTTPException:
+        return None

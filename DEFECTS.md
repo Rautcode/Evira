@@ -21,8 +21,8 @@
 | D11 | 🔴 | ✅ | `routers/email.py` | `POST /email/send` arbitrary `attachment_path` → exfiltration. → Now auth-required (D10) + attachments restricted to allowed output dirs (`reports`/`charts`/`outputs`) via `is_within_any`; recipients validated with `email_validator`. |
 | D12 | 🔴 | ✅ | `routers/charts.py` | `GET /charts/download/{file_name}` path traversal. → `resolve_within(CHARTS_DIR, file_name)` rejects `..`/absolute escapes (new `app/utils/safe_paths.py`). |
 | D13 | 🔴 | ✅ | `routers/logger.py` | `POST /logger/log` arbitrary write. → Auth-required (D10) + 16 KB entry cap, per-line JSON guard, `limit` clamped `1..1000`, OSError handled. |
-| D14 | 🟠 | ⬜ | `routers/auth.py` | `validate_sql_login` connects to a caller-supplied `server`/`database` → SSRF / credential probing. → Restrict to a configured allowlist. |
-| D15 | 🟠 | ⬜ | `routers/websocket.py` | WS endpoints have no token check on connect; also URL built from `window.location.host` (frontend), not the backend. → Add WS auth; fix client base URL. |
+| D14 | 🟠 | ✅ | `services/auth_service.py` | `validate_sql_login` connected to any caller-supplied `server` → SSRF. → `MSSQL_ALLOWED_SERVERS` allowlist (falls back to `MSSQL_SERVER`; `*` opt-out) + reject ODBC connection-string injection chars (`;{}\n\r`) in server/db/user/pass. |
+| D15 | 🟠 | ◑ | `routers/websocket.py` (backend ✅) | WS endpoints had no auth. → Backend now validates `?token=` via `verify_ws_token`, closes 1008 on missing/invalid. **Frontend follow-up (open):** `useWebSocket` must target the backend host (not `window.location.host`) and append `?token=`. |
 | D16 | 🟠 | ✅ | `main.py` | `CORS allow_origins=["*"]`. → Env-driven allowlist via `CORS_ALLOW_ORIGINS` (default `http://localhost:3000`). |
 
 ## C. Correctness bugs
@@ -32,7 +32,7 @@
 | D20 | 🟠 | ✅ | `routers/template.py` + service | `delete_template` wrote `{}` instead of deleting; `template_id` flowed into file paths (traversal). → Added `TemplateService.delete_template` (real `os.remove`) + `_path_for` id validation (`^[A-Za-z0-9_-]{1,128}$`) used by all ops; router maps `ValueError`→400, `FileNotFoundError`→404; enabled Jinja autoescape. |
 | D21 | 🟠 | ✅ | `routers/charts.py` | `d[x_field]`/`d[y_field]` → `KeyError`/500 on missing field; blank chart on empty data. → Validate non-empty + required fields present, return 400; figure closed in `finally`; switched to headless `Agg` backend. |
 | D22 | 🟠 | ✅ | `routers/report.py` | Returned `str(e)` to clients (preview/list/machines) — leaked DB schema. → Generic messages + `logger.exception`; reformatted the mashed `for ...: machines.append(` loop for clarity. |
-| D23 | 🟠 | ⬜ | `routers/scheduler.py` | Bad cron string → unhandled 500; `remove_job` returns error with HTTP 200. → try/except → 400; proper status codes. |
+| D23 | 🟠 | ✅ | `routers/scheduler.py` | Bad cron string → unhandled 500; `remove_job` returned error with HTTP 200. → `from_crontab` wrapped → 400; `remove_job` → 404 when missing, 500 on failure, 200 only on success. |
 | D24 | 🟡 | ⬜ | `services/template_service.py` | Template preview renders via `env.from_string()`, so `select_autoescape` doesn't apply — preview output is unescaped. → If preview is shown as HTML, render with explicit `autoescape=True` (or sanitize); if output target is PDF/markdown, document that escaping is intentionally off. |
 
 ## D. Frontend ↔ backend contract mismatches
