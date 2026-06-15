@@ -33,6 +33,7 @@
 | D21 | 🟠 | ✅ | `routers/charts.py` | `d[x_field]`/`d[y_field]` → `KeyError`/500 on missing field; blank chart on empty data. → Validate non-empty + required fields present, return 400; figure closed in `finally`; switched to headless `Agg` backend. |
 | D22 | 🟠 | ✅ | `routers/report.py` | Returned `str(e)` to clients (preview/list/machines) — leaked DB schema. → Generic messages + `logger.exception`; reformatted the mashed `for ...: machines.append(` loop for clarity. |
 | D23 | 🟠 | ⬜ | `routers/scheduler.py` | Bad cron string → unhandled 500; `remove_job` returns error with HTTP 200. → try/except → 400; proper status codes. |
+| D24 | 🟡 | ⬜ | `services/template_service.py` | Template preview renders via `env.from_string()`, so `select_autoescape` doesn't apply — preview output is unescaped. → If preview is shown as HTML, render with explicit `autoescape=True` (or sanitize); if output target is PDF/markdown, document that escaping is intentionally off. |
 
 ## D. Frontend ↔ backend contract mismatches
 

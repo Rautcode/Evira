@@ -14,6 +14,11 @@ _VALID_TEMPLATE_ID = re.compile(r'^[A-Za-z0-9_-]{1,128}$')
 class TemplateService:
     def __init__(self, templates_dir: Optional[str] = None):
         self.templates_dir = templates_dir or TEMPLATES_DIR
+        # NOTE: select_autoescape keys off the template *filename*, so it does
+        # NOT apply to render_template()/preview_template() which use
+        # env.from_string() (no name → autoescape off). Output escaping for the
+        # preview path is tracked separately (DEFECTS D24); decide per output
+        # target (HTML preview vs. PDF/markdown) before forcing autoescape.
         self.env = Environment(
             loader=FileSystemLoader(self.templates_dir),
             autoescape=select_autoescape(enabled_extensions=("html", "htm", "xml")),
