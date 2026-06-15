@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+backend
+**/__pycache__
+**/*.pyc
+*.log
+*.pdf
+.env
+.env.local

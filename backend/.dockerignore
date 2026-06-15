@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+*.db
+*.sqlite
+reports/*.pdf
+reports/*.csv
+charts/*.png
+logs/
+data/jobs.sqlite
+e2e_report_out.pdf
+_*.png
+.env

@@ -1,0 +1,22 @@
+# Frontend image: Next.js 14 (build + serve). NEXT_PUBLIC_API_BASE_URL is a
+# build-time value because Next inlines NEXT_PUBLIC_* into the client bundle.
+FROM node:20-alpine
+
+WORKDIR /app
+
+ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+
+# Install ALL deps (incl. devDependencies like tailwind/autoprefixer/typescript)
+# so `next build` works. Do NOT set NODE_ENV=production before this — it makes
+# npm skip devDependencies and the build fails on missing autoprefixer.
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+# Production runtime only after the build.
+ENV NODE_ENV=production
+EXPOSE 3000
+CMD ["npm", "run", "start"]
