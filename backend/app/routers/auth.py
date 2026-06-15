@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, status, Request, Body, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from app.services.auth_service import validate_sql_login
+from app.core.security import decode_token, get_current_user
 from fastapi.responses import JSONResponse
 import jwt
 from datetime import datetime, timedelta, timezone
@@ -61,13 +62,18 @@ def login(data: LoginRequest = Body(...)):
 
 @router.get("/verify")
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        return {"success": True, "user": payload.get("user")}
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token has expired")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    payload = decode_token(credentials.credentials)
+    return {"success": True, "user": payload.get("user")}
+
+@router.get("/me")
+def get_me(current_user: dict = Depends(get_current_user)):
+    """Return the currently authenticated user (frontend calls this on load)."""
+    return {"success": True, "user": current_user.get("user"), "username": current_user.get("sub")}
+
+@router.post("/logout")
+def logout():
+    """Stateless JWT logout. The client discards its token; nothing to do server-side."""
+    return {"success": True, "message": "Logged out"}
 
 @router.get("/login")
 def login_get():
