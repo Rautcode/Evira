@@ -12,10 +12,11 @@ event_logger = EventLogger()
 LOGS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../logs'))
 LOG_FILE = os.path.join(LOGS_DIR, 'activity.log')
 
-if not os.path.exists(LOGS_DIR):
-    os.makedirs(LOGS_DIR)
+os.makedirs(LOGS_DIR, exist_ok=True)
 
-logging.basicConfig(filename=LOG_FILE, level=logging.INFO)
+# Activity entries are written directly to LOG_FILE below; logging config is
+# owned centrally by app.main (do not call basicConfig here — it conflicts).
+logger = logging.getLogger(__name__)
 
 MAX_LOG_ENTRY_BYTES = 16 * 1024  # cap a single entry to prevent disk abuse
 

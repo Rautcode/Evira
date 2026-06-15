@@ -15,10 +15,23 @@ export function useWebSocket(url: string, options: WebSocketOptions) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Format WebSocket URL
-    const wsUrl = url.startsWith('ws://') || url.startsWith('wss://')
-      ? url
-      : `ws://${window.location.host}${url.startsWith('/') ? '' : '/'}${url}`;
+    // Build the WebSocket URL against the BACKEND host (not the Next.js host),
+    // derived from the same base as the REST API, and attach the auth token as
+    // a query param (browsers cannot set an Authorization header on a WS).
+    let wsUrl: string;
+    if (url.startsWith('ws://') || url.startsWith('wss://')) {
+      wsUrl = url;
+    } else {
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+      const wsBase = apiBase.replace(/^http/, 'ws').replace(/\/$/, '');
+      const path = url.startsWith('/') ? url : `/${url}`;
+      wsUrl = `${wsBase}${path}`;
+    }
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    if (token) {
+      wsUrl += (wsUrl.includes('?') ? '&' : '?') + `token=${encodeURIComponent(token)}`;
+    }
 
     // Create WebSocket connection
     ws.current = new WebSocket(wsUrl);

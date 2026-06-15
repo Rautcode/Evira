@@ -22,7 +22,7 @@
 | D12 | 🔴 | ✅ | `routers/charts.py` | `GET /charts/download/{file_name}` path traversal. → `resolve_within(CHARTS_DIR, file_name)` rejects `..`/absolute escapes (new `app/utils/safe_paths.py`). |
 | D13 | 🔴 | ✅ | `routers/logger.py` | `POST /logger/log` arbitrary write. → Auth-required (D10) + 16 KB entry cap, per-line JSON guard, `limit` clamped `1..1000`, OSError handled. |
 | D14 | 🟠 | ✅ | `services/auth_service.py` | `validate_sql_login` connected to any caller-supplied `server` → SSRF. → `MSSQL_ALLOWED_SERVERS` allowlist (falls back to `MSSQL_SERVER`; `*` opt-out) + reject ODBC connection-string injection chars (`;{}\n\r`) in server/db/user/pass. |
-| D15 | 🟠 | ◑ | `routers/websocket.py` (backend ✅) | WS endpoints had no auth. → Backend now validates `?token=` via `verify_ws_token`, closes 1008 on missing/invalid. **Frontend follow-up (open):** `useWebSocket` must target the backend host (not `window.location.host`) and append `?token=`. |
+| D15 | 🟠 | ✅ | `routers/websocket.py` + `useWebSocket.ts` | WS endpoints had no auth + client targeted the wrong host. → Backend validates `?token=` (`verify_ws_token`, closes 1008); frontend `useWebSocket` now builds the URL from `NEXT_PUBLIC_API_BASE_URL` (http→ws) and appends the stored `auth_token`. |
 | D16 | 🟠 | ✅ | `main.py` | `CORS allow_origins=["*"]`. → Env-driven allowlist via `CORS_ALLOW_ORIGINS` (default `http://localhost:3000`). |
 
 ## C. Correctness bugs
@@ -47,10 +47,10 @@
 | ID | Sev | Status | Issue → Fix |
 |----|-----|--------|-------------|
 | D40 | 🟠 | ⬜ | Blocking sync DB/file/matplotlib I/O inside `async def` handlers across routers → blocks event loop. → Make routes `def` (threadpool) or async drivers. |
-| D41 | 🟠 | ⬜ | `scheduler.py` starts `BackgroundScheduler` at import → duplicates under multi-worker; can't shut down cleanly. → Start in app lifespan, single worker. |
-| D42 | 🟠 | ⬜ | `db_init_new.py` seeds tables with `random.uniform(...)` values. → Deterministic migrations (Alembic) + explicit demo-seed mode. |
-| D43 | 🟡 | ⬜ | Unpinned backend deps (`requirements.txt`). → Pin exact versions. |
-| D44 | 🟡 | ⬜ | Two `basicConfig` calls (scheduler.py, logger.py) conflict. → Central logging config. |
+| D41 | 🟠 | ✅ | `scheduler.py` started `BackgroundScheduler` at import. → Now started/stopped in app lifespan (`core/events.py`), not at import. (Multi-worker note documented: run scheduler in a single worker or external runner.) |
+| D42 | 🟠 | ◑ | `db_init_new.py` seeds tables with `random.uniform(...)`. → **Partial:** startup seed now gated behind `SEED_DEMO_DATA=1` (no auto-random-seed in prod). **Still open:** replace raw SQL init with Alembic migrations. |
+| D43 | 🟡 | ✅ | Unpinned backend deps; PyJWT + SQLAlchemy were missing entirely. → Pinned all to verified installed versions; added the two missing deps. |
+| D44 | 🟡 | ✅ | Conflicting `basicConfig` calls in scheduler.py + logger.py. → Removed both; central logging owned by `app.main`; modules use `getLogger(__name__)`. |
 
 ---
 

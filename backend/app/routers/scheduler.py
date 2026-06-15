@@ -21,14 +21,13 @@ jobstores = {
 }
 
 router = APIRouter(tags=["scheduler"], prefix="/scheduler")
+# Created here but started in the app lifespan (app.core.events), not at import,
+# to avoid duplicate schedulers and give it a clean start/stop. NOTE: running
+# uvicorn with >1 worker still creates one scheduler per process — use a single
+# worker for the scheduler, or move jobs to an external runner (see DEFECTS D41).
 scheduler = BackgroundScheduler(jobstores=jobstores)
-scheduler.start()
 
-LOGS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../logs'))
-LOG_FILE = os.path.join(LOGS_DIR, 'scheduler.log')
-if not os.path.exists(LOGS_DIR):
-    os.makedirs(LOGS_DIR)
-logging.basicConfig(filename=LOG_FILE, level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class ScheduleRequest(BaseModel):
     title: str
