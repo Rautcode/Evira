@@ -309,6 +309,7 @@ class ReportService:
         return res["raw"]
 
     def generate_report(self, date_range: Dict[str, str], machine_id: str, shift: str, report_type: str, template_id: str, output_type: str = 'pdf', with_chart: bool = False) -> str:
+        os.makedirs(REPORTS_DIR, exist_ok=True)
         data_res = self.fetch_data(date_range, machine_id, shift, report_type)
         
         context = {
