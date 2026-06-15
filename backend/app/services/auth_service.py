@@ -2,6 +2,7 @@ import pyodbc
 from typing import Optional, Dict
 
 import os
+import re
 
 
 def _server_allowed(server: str) -> bool:
@@ -11,8 +12,10 @@ def _server_allowed(server: str) -> bool:
     falls back to the configured MSSQL_SERVER. An explicit "*" disables the
     check (development only).
     """
+    # Use ';'/newline as delimiters (NOT comma) because a SQL Server address can
+    # itself contain a comma for the port, e.g. "localhost,1433".
     raw = os.getenv("MSSQL_ALLOWED_SERVERS") or os.getenv("MSSQL_SERVER", "")
-    allowed = {s.strip().lower() for s in raw.split(",") if s.strip()}
+    allowed = {s.strip().lower() for s in re.split(r'[;\n]', raw) if s.strip()}
     if "*" in allowed:
         return True
     # If nothing is configured, be permissive (single-tenant local dev) rather

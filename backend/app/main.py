@@ -39,9 +39,15 @@ app.add_middleware(
 # and websocket routes handle their own auth at connect time.
 _protected = [Depends(get_current_user)]
 
-# Register event handlers
-app.add_event_handler("startup", lambda: startup_event(app))
-app.add_event_handler("shutdown", lambda: shutdown_event(app))
+# Register event handlers. These must be coroutine functions so Starlette
+# awaits them — a sync lambda returning a coroutine is never awaited.
+@app.on_event("startup")
+async def _on_startup():
+    await startup_event(app)
+
+@app.on_event("shutdown")
+async def _on_shutdown():
+    await shutdown_event(app)
 
 # Register routers. Public: auth, websocket. All others require auth.
 app.include_router(auth.router)
