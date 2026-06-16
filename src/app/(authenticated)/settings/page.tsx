@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { getScadaTags, getDashboardStats, getSmtpSettings, updateSmtpSettings, getSystemSettings, updateSystemSettings } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { TagMappingManager } from '@/components/settings/tag-mapping-manager';
 
 interface ScadaTag {
   id: number;
@@ -551,6 +552,9 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Tag Mapping Rules (no-code OPC UA tag -> machine/parameter mapping) */}
+      <TagMappingManager />
 
       {/* SMTP Configuration Form */}
       <Card className="shadow-md border-border bg-card">
