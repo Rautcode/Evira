@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const field = (label: string, node: React.ReactNode) => (
   <div className="space-y-1.5">
-    <label className="text-xs font-medium text-slate-400">{label}</label>
+    <label className="text-xs font-medium text-muted-foreground">{label}</label>
     {node}
   </div>
 );
@@ -84,24 +84,24 @@ export function StepConnect({ onChanged }: { status: any; onChanged: () => void 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Connect your systems</h1>
-        <p className="mt-1 text-slate-400">Point the platform at your SCADA server and database. You only do this once.</p>
+        <h1 className="text-2xl font-semibold text-foreground">Connect your systems</h1>
+        <p className="mt-1 text-muted-foreground">Point the platform at your SCADA server and database. You only do this once.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="space-y-4 rounded-xl border border-white/10 bg-slate-900/40 p-5">
-          <h3 className="text-sm font-semibold text-white">SCADA OPC UA</h3>
+        <div className="space-y-4 rounded-xl border border-border bg-muted/40 p-5">
+          <h3 className="text-sm font-semibold text-foreground">SCADA OPC UA</h3>
           {field("Server URL", <Input value={opcuaUrl} onChange={(e) => setOpcuaUrl(e.target.value)} placeholder="opc.tcp://192.168.1.100:4840" />)}
           {field("Username (optional)", <Input value={opcuaUser} onChange={(e) => setOpcuaUser(e.target.value)} placeholder="WinCCAdmin" />)}
           {field("Password (optional)", <Input type="password" value={opcuaPass} onChange={(e) => setOpcuaPass(e.target.value)} placeholder="••••••••" />)}
         </div>
-        <div className="space-y-4 rounded-xl border border-white/10 bg-slate-900/40 p-5">
-          <h3 className="text-sm font-semibold text-white">SQL database</h3>
+        <div className="space-y-4 rounded-xl border border-border bg-muted/40 p-5">
+          <h3 className="text-sm font-semibold text-foreground">SQL database</h3>
           {field("Server", <Input value={dbServer} onChange={(e) => setDbServer(e.target.value)} placeholder="192.168.1.50 or host,port" />)}
           {field("Database", <Input value={dbName} onChange={(e) => setDbName(e.target.value)} placeholder="scada_reports" />)}
           {field(
             "Auth method",
-            <select value={dbAuth} onChange={(e) => setDbAuth(e.target.value)} className="h-10 w-full rounded-md border border-white/10 bg-slate-900 px-3 text-sm text-slate-100">
+            <select value={dbAuth} onChange={(e) => setDbAuth(e.target.value)} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground">
               <option value="sql">SQL Server account</option>
               <option value="windows">Windows Active Directory</option>
             </select>
@@ -126,7 +126,7 @@ export function StepConnect({ onChanged }: { status: any; onChanged: () => void 
         <Button variant="outline" onClick={doTest} disabled={testing}>
           {testing ? "Testing…" : "Test connection"}
         </Button>
-        <Button onClick={doSave} disabled={saving} className="bg-teal-500 text-slate-950 hover:bg-teal-400">
+        <Button onClick={doSave} disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90">
           {saving ? "Saving…" : "Save & connect"}
         </Button>
       </div>

@@ -34,23 +34,23 @@ export function WizardShell({
     <div className="mx-auto w-full max-w-6xl px-6 py-8">
       <header className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500/15 text-teal-300">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
             <Gauge className="h-6 w-6" />
           </span>
           <div>
-            <div className="text-base font-semibold text-white">Scada reports</div>
-            <div className="text-xs text-slate-400">Guided setup</div>
+            <div className="text-base font-semibold text-foreground">Scada reports</div>
+            <div className="text-xs text-muted-foreground">Guided setup</div>
           </div>
         </div>
         <div>{headerRight}</div>
       </header>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[260px_1fr]">
-        <aside className="h-fit rounded-2xl border border-white/10 bg-slate-900/40 p-3 lg:sticky lg:top-8">
+        <aside className="h-fit rounded-2xl border border-border bg-card p-3 lg:sticky lg:top-8">
           <StepRail steps={steps} current={current} done={done} />
         </aside>
 
-        <section className="flex min-h-[440px] flex-col rounded-2xl border border-white/10 bg-slate-900/40 p-6 md:p-8">
+        <section className="flex min-h-[440px] flex-col rounded-2xl border border-border bg-card p-6 md:p-8">
           <AnimatePresence mode="wait">
             <motion.div
               key={current}
@@ -64,12 +64,12 @@ export function WizardShell({
             </motion.div>
           </AnimatePresence>
 
-          <footer className="mt-8 flex items-center justify-between border-t border-white/10 pt-5">
+          <footer className="mt-8 flex items-center justify-between border-t border-border pt-5">
             <button
               type="button"
               onClick={onBack}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-slate-300 transition-colors ${
-                hideBack ? "invisible" : "hover:bg-white/5"
+              className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors ${
+                hideBack ? "invisible" : "hover:bg-muted"
               }`}
             >
               <ChevronLeft className="h-4 w-4" /> Back
@@ -78,7 +78,7 @@ export function WizardShell({
               type="button"
               onClick={onNext}
               disabled={nextDisabled || busy}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-teal-400 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {busy ? "Working…" : nextLabel}
               {!busy && <ChevronRight className="h-4 w-4" />}

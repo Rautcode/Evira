@@ -14,7 +14,7 @@ export default function LoginPage() {
 
       <div className="z-10 w-full max-w-md px-6 py-12 animate-fade-in-up">
         {/* Main Glassmorphic Login Card */}
-        <div className="bg-white/70 dark:bg-slate-950/75 backdrop-blur-xl border border-white/40 dark:border-slate-800/40 shadow-xl dark:shadow-2xl rounded-[2.5rem] p-8 sm:p-10 transition-all duration-300">
+        <div className="bg-card/85 backdrop-blur-xl border border-border shadow-xl rounded-[2.5rem] p-8 sm:p-10 transition-all duration-300">
           <div className="flex flex-col items-center text-center mb-8 space-y-4">
             <AppLogo className="mb-2" iconSize={44} textSize="text-2xl" href="/login" />
             

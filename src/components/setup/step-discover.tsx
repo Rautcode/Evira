@@ -46,8 +46,8 @@ export function StepDiscover({ status, onChanged }: { status: any; onChanged: ()
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Discover your tags</h1>
-        <p className="mt-1 text-slate-400">The platform crawls your SCADA server and lists every variable it finds.</p>
+        <h1 className="text-2xl font-semibold text-foreground">Discover your tags</h1>
+        <p className="mt-1 text-muted-foreground">The platform crawls your SCADA server and lists every variable it finds.</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -60,10 +60,10 @@ export function StepDiscover({ status, onChanged }: { status: any; onChanged: ()
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-white/10">
+      <div className="overflow-hidden rounded-xl border border-border">
         <div className="max-h-72 overflow-auto">
           <table className="w-full text-sm">
-            <thead className="bg-white/5 text-slate-400">
+            <thead className="bg-muted/50 text-muted-foreground">
               <tr>
                 <th className="px-4 py-2 text-left font-medium">Tag</th>
                 <th className="px-4 py-2 text-left font-medium">Machine</th>
@@ -73,16 +73,16 @@ export function StepDiscover({ status, onChanged }: { status: any; onChanged: ()
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-slate-500">Loading…</td></tr>
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">Loading…</td></tr>
               ) : tags.length === 0 ? (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-slate-500">No tags yet. Connect your OPC UA server in step 1, then Re-scan.</td></tr>
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">No tags yet. Connect your OPC UA server in step 1, then Re-scan.</td></tr>
               ) : (
                 tags.slice(0, 100).map((t) => (
-                  <tr key={t.id} className="border-t border-white/5">
-                    <td className="px-4 py-2 font-mono text-xs text-slate-200">{t.tag_name}</td>
-                    <td className="px-4 py-2 text-slate-300">{t.machine_id}</td>
-                    <td className="px-4 py-2 text-slate-400">{t.tag_type}</td>
-                    <td className="px-4 py-2 text-right font-mono text-slate-200">{t.value ?? "—"}</td>
+                  <tr key={t.id} className="border-t border-border">
+                    <td className="px-4 py-2 font-mono text-xs text-foreground">{t.tag_name}</td>
+                    <td className="px-4 py-2 text-foreground">{t.machine_id}</td>
+                    <td className="px-4 py-2 text-muted-foreground">{t.tag_type}</td>
+                    <td className="px-4 py-2 text-right font-mono text-foreground">{t.value ?? "—"}</td>
                   </tr>
                 ))
               )}

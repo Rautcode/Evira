@@ -44,3 +44,4 @@ backend/_type_*.pdf
 *.exe
 *.msi
 stack_report.pdf
+dev-preview.cmd

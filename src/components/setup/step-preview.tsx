@@ -46,7 +46,7 @@ export function StepPreview() {
   };
 
   const sel = (v: string, set: (x: string) => void, opts: [string, string][]) => (
-    <select value={v} onChange={(e) => set(e.target.value)} className="h-10 rounded-md border border-white/10 bg-slate-900 px-3 text-sm text-slate-100">
+    <select value={v} onChange={(e) => set(e.target.value)} className="h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground">
       {opts.map(([val, lab]) => (
         <option key={val} value={val}>{lab}</option>
       ))}
@@ -56,23 +56,23 @@ export function StepPreview() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Preview your data</h1>
-        <p className="mt-1 text-slate-400">Pick a scope and see the exact data your report will use — before you generate it.</p>
+        <h1 className="text-2xl font-semibold text-foreground">Preview your data</h1>
+        <p className="mt-1 text-muted-foreground">Pick a scope and see the exact data your report will use — before you generate it.</p>
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
         {sel(machine, setMachine, [["all", "All machines"], ...machines.map((m: any) => [m.id, `${m.id} - ${m.name}`] as [string, string])])}
         {sel(shift, setShift, [["full", "All shifts"], ["Morning", "Morning"], ["Evening", "Evening"], ["Night", "Night"]])}
         {sel(type, setType, [["production_summary", "Production summary"], ["downtime_analysis", "Downtime analysis"], ["quality_metrics", "Quality metrics"]])}
-        <Button onClick={preview} disabled={loading} className="bg-teal-500 text-slate-950 hover:bg-teal-400">
+        <Button onClick={preview} disabled={loading} className="bg-primary text-primary-foreground hover:bg-primary/90">
           {loading ? "Loading…" : "Preview data"}
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-white/10">
+      <div className="overflow-hidden rounded-xl border border-border">
         <div className="max-h-72 overflow-auto">
           <table className="w-full text-sm">
-            <thead className="bg-white/5 text-slate-400">
+            <thead className="bg-muted/50 text-muted-foreground">
               <tr>
                 <th className="px-4 py-2 text-left font-medium">Timestamp</th>
                 <th className="px-4 py-2 text-left font-medium">Machine</th>
@@ -82,14 +82,14 @@ export function StepPreview() {
             </thead>
             <tbody>
               {rows.length === 0 ? (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-slate-500">Run a preview to see live data here.</td></tr>
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">Run a preview to see live data here.</td></tr>
               ) : (
                 rows.slice(0, 100).map((r, i) => (
-                  <tr key={i} className="border-t border-white/5">
-                    <td className="px-4 py-2 font-mono text-xs text-slate-300">{String(r.timestamp).slice(0, 19)}</td>
-                    <td className="px-4 py-2 text-slate-300">{r.machine}</td>
-                    <td className="px-4 py-2 text-slate-400">{r.parameter}</td>
-                    <td className="px-4 py-2 text-right font-mono text-slate-200">{r.value} {r.unit}</td>
+                  <tr key={i} className="border-t border-border">
+                    <td className="px-4 py-2 font-mono text-xs text-foreground">{String(r.timestamp).slice(0, 19)}</td>
+                    <td className="px-4 py-2 text-foreground">{r.machine}</td>
+                    <td className="px-4 py-2 text-muted-foreground">{r.parameter}</td>
+                    <td className="px-4 py-2 text-right font-mono text-foreground">{r.value} {r.unit}</td>
                   </tr>
                 ))
               )}

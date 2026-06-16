@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const field = (label: string, node: React.ReactNode) => (
   <div className="space-y-1.5">
-    <label className="text-xs font-medium text-slate-400">{label}</label>
+    <label className="text-xs font-medium text-muted-foreground">{label}</label>
     {node}
   </div>
 );
@@ -48,11 +48,11 @@ export function StepAutomate({ onChanged }: { status: any; onChanged: () => void
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Automate your reports</h1>
-        <p className="mt-1 text-slate-400">Optional: schedule a report to generate and email itself. You can also do this later from the Scheduler.</p>
+        <h1 className="text-2xl font-semibold text-foreground">Automate your reports</h1>
+        <p className="mt-1 text-muted-foreground">Optional: schedule a report to generate and email itself. You can also do this later from the Scheduler.</p>
       </div>
 
-      <div className="grid max-w-2xl grid-cols-1 gap-4 rounded-xl border border-white/10 bg-slate-900/40 p-5 md:grid-cols-2">
+      <div className="grid max-w-2xl grid-cols-1 gap-4 rounded-xl border border-border bg-muted/40 p-5 md:grid-cols-2">
         {field("Report name", <Input value={title} onChange={(e) => setTitle(e.target.value)} />)}
         {field("Schedule (cron)", <Input value={cron} onChange={(e) => setCron(e.target.value)} placeholder="0 6 * * *" />)}
         <div className="md:col-span-2">
@@ -60,12 +60,12 @@ export function StepAutomate({ onChanged }: { status: any; onChanged: () => void
         </div>
       </div>
 
-      <Button onClick={save} disabled={saving} className="bg-teal-500 text-slate-950 hover:bg-teal-400">
+      <Button onClick={save} disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90">
         {saving ? "Saving…" : "Create schedule"}
       </Button>
 
-      <p className="text-sm text-slate-500">
-        When you&apos;re done, click <span className="font-medium text-slate-300">Finish setup</span> to head to your dashboard.
+      <p className="text-sm text-muted-foreground">
+        When you&apos;re done, click <span className="font-medium text-foreground">Finish setup</span> to head to your dashboard.
       </p>
     </div>
   );

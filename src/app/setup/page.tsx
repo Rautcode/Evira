@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { WizardShell } from "@/components/setup/wizard-shell";
 import { StatusChip } from "@/components/setup/status-chip";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { StepConnect } from "@/components/setup/step-connect";
 import { StepDiscover } from "@/components/setup/step-discover";
 import { StepMap } from "@/components/setup/step-map";
@@ -70,10 +71,13 @@ export default function SetupPage() {
       busy={busy}
       nextLabel={isLast ? "Finish setup" : "Continue"}
       headerRight={
-        <StatusChip
-          state={status?.database_reachable ? "ok" : "pending"}
-          label={status?.database_reachable ? "System online" : "Checking…"}
-        />
+        <div className="flex items-center gap-2">
+          <StatusChip
+            state={status?.database_reachable ? "ok" : "pending"}
+            label={status?.database_reachable ? "System online" : "Checking…"}
+          />
+          <ThemeToggle />
+        </div>
       }
     >
       {step === 0 && <StepConnect status={status} onChanged={refresh} />}
