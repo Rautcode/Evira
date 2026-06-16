@@ -32,8 +32,8 @@ with TestClient(app) as client:
 
     # 2. Login with real SQL credentials
     r = client.post("/auth/login", json={
-        "auth_type": "sql", "server": SERVER,
-        "database": "scada_reports", "username": "sa", "password": os.environ["MSSQL_PASSWORD"],
+        "username": os.getenv("ADMIN_USERNAME", "admin"),
+        "password": os.getenv("ADMIN_PASSWORD", "admin123"),
     })
     ok = r.status_code == 200 and r.json().get("token")
     check("login returns token", bool(ok), f"status={r.status_code}")

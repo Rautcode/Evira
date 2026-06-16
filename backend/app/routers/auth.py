@@ -2,9 +2,8 @@ import os
 from fastapi import APIRouter, HTTPException, status, Request, Body, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from app.services.auth_service import validate_sql_login
+from app.services.user_service import verify_user
 from app.core.security import decode_token, get_current_user
-from fastapi.responses import JSONResponse
 import jwt
 from datetime import datetime, timedelta, timezone
 
@@ -18,47 +17,25 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 1 day
 
 class LoginRequest(BaseModel):
-    auth_type: str  # 'sql' or 'windows'
-    server: str | None = None
-    database: str | None = None
     username: str
-    password: str | None = None
+    password: str
 
 @router.post("/login")
 def login(data: LoginRequest = Body(...)):
-    server = data.server or os.getenv("MSSQL_SERVER", "localhost")
-    database = data.database or os.getenv("MSSQL_DATABASE", "scada_reports")
-    
-    if data.auth_type == "sql" and not all([data.username, data.password]):
-        raise HTTPException(
-            status_code=400,
-            detail="Username and password are required for SQL authentication"
-        )
-    elif data.auth_type == "windows" and not data.username:
-        raise HTTPException(
-            status_code=400,
-            detail="Username is required for Windows authentication"
-        )
-        
-    result = validate_sql_login(
-        server=server,
-        database=database,
-        username=data.username,
-        password=data.password or "",
-        auth_type=data.auth_type
-    )
-    if result.get("success"):
-        # Generate JWT token
-        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        payload = {
-            "sub": data.username,
-            "exp": expire,
-            "user": result["user"]
-        }
-        token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-        return {"success": True, "user": result["user"], "token": token}
-    else:
-        raise HTTPException(status_code=401, detail=result.get("error", "Login failed"))
+    """Simple username/password login against app user accounts."""
+    user = verify_user(data.username, data.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    payload = {
+        "sub": user["username"],
+        "exp": expire,
+        "user": user["username"],
+        "role": user.get("role", "operator"),
+    }
+    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    return {"success": True, "user": user["username"], "role": user.get("role", "operator"), "token": token}
 
 @router.get("/verify")
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):

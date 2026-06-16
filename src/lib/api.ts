@@ -84,15 +84,8 @@ api.interceptors.response.use(
 );
 
 // --- Auth ---
-export const login = (data: { 
-  auth_type: 'sql' | 'windows';
-  server?: string; 
-  database?: string; 
-  username: string; 
-  password?: string;
-}) => {
-  return api.post('/auth/login', data);
-};
+export const login = (data: { username: string; password: string }) =>
+  api.post('/auth/login', data);
 export const logout = () => api.post('/auth/logout');
 export const getCurrentUser = () => api.get('/auth/me');
 

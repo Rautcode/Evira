@@ -35,8 +35,8 @@ check("unknown tag -> no match", tag_mapping_service.match_machine("RX-9000-foo"
 # 3. CRUD API: add a real-world custom rule and confirm it matches after reload
 with TestClient(app) as client:
     r = client.post("/auth/login", json={
-        "auth_type": "sql", "server": SERVER, "database": "scada_reports",
-        "username": "sa", "password": os.environ["MSSQL_PASSWORD"],
+        "username": os.getenv("ADMIN_USERNAME", "admin"),
+        "password": os.getenv("ADMIN_PASSWORD", "admin123"),
     })
     h = {"Authorization": f"Bearer {r.json()['token']}"}
 

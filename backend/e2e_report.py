@@ -29,8 +29,8 @@ def check(name, ok, detail=""):
 
 with TestClient(app) as client:
     r = client.post("/auth/login", json={
-        "auth_type": "sql", "server": SERVER, "database": "scada_reports",
-        "username": "sa", "password": os.environ["MSSQL_PASSWORD"],
+        "username": os.getenv("ADMIN_USERNAME", "admin"),
+        "password": os.getenv("ADMIN_PASSWORD", "admin123"),
     })
     token = r.json().get("token")
     h = {"Authorization": f"Bearer {token}"}

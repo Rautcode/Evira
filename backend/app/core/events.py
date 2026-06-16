@@ -14,7 +14,9 @@ async def startup_event(app: FastAPI):
     """Handle application startup."""
     try:
         from app.utils.db_init_new import initialize_database, seed_test_data
+        from app.services.user_service import ensure_default_admin
         initialize_database()
+        ensure_default_admin()
         # Demo/random seed data is opt-in only — never auto-populate a
         # production database with synthetic values (see DEFECTS D42).
         if os.getenv("SEED_DEMO_DATA", "0") == "1":
