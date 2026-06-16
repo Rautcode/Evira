@@ -95,12 +95,14 @@ def preview_report_data(data: PreviewRequest = Body(...)):
     """Fetch logs to preview them in Step 3 of the report generator."""
     try:
         service = ReportService(data.db_params)
-        logs = service.fetch_data(
+        result = service.fetch_data(
             date_range=data.date_range,
             machine_id=data.machine_id,
             shift=data.shift,
             report_type=data.report_type
         )
+        # fetch_data returns {"raw": [...], "pivoted": [...]}; preview shows the raw rows.
+        logs = result.get("raw", []) if isinstance(result, dict) else (result or [])
         formatted_logs = []
         for i, log in enumerate(logs):
             formatted_logs.append({

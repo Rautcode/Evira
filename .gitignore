@@ -45,3 +45,4 @@ backend/_type_*.pdf
 *.msi
 stack_report.pdf
 dev-preview.cmd
+backend/audit_full.py
