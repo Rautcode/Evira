@@ -136,5 +136,12 @@ export const getScadaTags = () => api.get('/dashboard/scada/tags');
 export const getSystemSettings = () => api.get('/system-settings/');
 export const updateSystemSettings = (data: any) => api.put('/system-settings/', data);
 
+// --- Tag Mapping (OPC UA tag -> machine/parameter rules) ---
+export const getTagMappingRules = () => api.get('/tag-mapping/');
+export const createTagMappingRule = (data: any) => api.post('/tag-mapping/', data);
+export const updateTagMappingRule = (id: number, data: any) => api.put(`/tag-mapping/${id}`, data);
+export const deleteTagMappingRule = (id: number) => api.delete(`/tag-mapping/${id}`);
+export const reloadTagMapping = () => api.post('/tag-mapping/reload');
+
 export default api;
 

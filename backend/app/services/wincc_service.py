@@ -161,40 +161,14 @@ class WinCCMonitor:
             logger.error(f"Error during tag auto-discovery: {e}")
 
     def _match_machine(self, display_name: str, node_id: str) -> Optional[str]:
-        """Heuristics to map OPC UA tags to machine IDs based on names."""
-        text = (display_name + " " + node_id).lower()
-        if "extruder" in text or "m001" in text:
-            return "M001"
-        if "molding" in text or "m002" in text:
-            return "M002"
-        if "cooling" in text or "chiller" in text or "m003" in text:
-            return "M003"
-        if "packaging" in text or "m004" in text:
-            return "M004"
-        if "mixer" in text or "blending" in text or "m005" in text:
-            return "M005"
-        return None
+        """Map an OPC UA tag to a machine ID using configurable rules."""
+        from app.services.tag_mapping_service import tag_mapping_service
+        return tag_mapping_service.match_machine(f"{display_name} {node_id}")
 
     def _match_parameter(self, display_name: str, node_id: str) -> Optional[dict]:
-        """Heuristics to map OPC UA tags to report parameter variables and units."""
-        text = (display_name + " " + node_id).lower()
-        if "temp" in text or "temperature" in text:
-            return {"parameter": "Temperature", "unit": "C"}
-        if "press" in text or "pressure" in text:
-            return {"parameter": "Pressure", "unit": "bar"}
-        if "speed" in text or "rpm" in text:
-            return {"parameter": "Speed", "unit": "RPM"}
-        if "force" in text or "clamp" in text:
-            return {"parameter": "Clamping Force", "unit": "kN"}
-        if "time" in text or "cycle" in text:
-            return {"parameter": "Cycle Time", "unit": "s"}
-        if "flow" in text:
-            return {"parameter": "Flow Rate", "unit": "L/min"}
-        if "count" in text or "pack" in text:
-            return {"parameter": "Pack Count", "unit": "pcs"}
-        if "error" in text:
-            return {"parameter": "Error Rate", "unit": "%"}
-        return None
+        """Map an OPC UA tag to a report parameter/unit using configurable rules."""
+        from app.services.tag_mapping_service import tag_mapping_service
+        return tag_mapping_service.match_parameter(f"{display_name} {node_id}")
 
     async def _sync_discovered_tags_to_db(self):
         """Insert or update discovered tags in the database wincc_tags table."""

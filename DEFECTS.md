@@ -18,6 +18,7 @@
 | ID | Sev | Status | File(s) | Issue → Fix |
 |----|-----|--------|---------|-------------|
 | D10 | 🔴 | ✅ | all routers | **No endpoint enforced auth** despite JWT machinery in `auth.py`. → Added `app/core/security.py` (`get_current_user`); applied `dependencies=[Depends(get_current_user)]` centrally in `main.py` to all data routers (36 routes now require a Bearer token). Auth + websocket stay public. |
+| D50 | 🟠 | ✅ | `services/wincc_service.py` | OPC UA tag→machine/parameter mapping was **hardcoded** (`extruder→M001`, `temp→Temperature`) — wouldn't match a real factory's tag names (the blocker for connecting real WinCC). → DB-backed `tag_mapping_rules` (migration 0002, seeded with the old heuristics) + `TagMappingService` (cached) + `/tag-mapping` CRUD API + `/reload` re-crawl. Verified 10/10. |
 | D11 | 🔴 | ✅ | `routers/email.py` | `POST /email/send` arbitrary `attachment_path` → exfiltration. → Now auth-required (D10) + attachments restricted to allowed output dirs (`reports`/`charts`/`outputs`) via `is_within_any`; recipients validated with `email_validator`. |
 | D12 | 🔴 | ✅ | `routers/charts.py` | `GET /charts/download/{file_name}` path traversal. → `resolve_within(CHARTS_DIR, file_name)` rejects `..`/absolute escapes (new `app/utils/safe_paths.py`). |
 | D13 | 🔴 | ✅ | `routers/logger.py` | `POST /logger/log` arbitrary write. → Auth-required (D10) + 16 KB entry cap, per-line JSON guard, `limit` clamped `1..1000`, OSError handled. |
