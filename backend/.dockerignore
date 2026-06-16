@@ -7,7 +7,12 @@ reports/*.pdf
 reports/*.csv
 charts/*.png
 logs/
-data/jobs.sqlite
+data/
 e2e_report_out.pdf
+e2e_smoke.py
+e2e_report.py
+e2e_types.py
+e2e_tagmap.py
 _*.png
+dev-preview.cmd
 .env
