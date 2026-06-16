@@ -31,15 +31,19 @@ def _has_connstr_injection(*values: Optional[str]) -> bool:
     return any(v is not None and any(c in v for c in (";", "{", "}", "\n", "\r")) for v in values)
 
 
-def validate_sql_login(server: str, database: str, username: Optional[str] = None, password: Optional[str] = None, auth_type: str = "sql") -> Dict:
+def validate_sql_login(server: str, database: str, username: Optional[str] = None, password: Optional[str] = None, auth_type: str = "sql", enforce_allowlist: bool = True) -> Dict:
     """
     Attempts to connect to SQL Server using provided credentials.
     Returns dict with success and user info or error message.
+
+    enforce_allowlist=False is used by the authenticated onboarding "test
+    connection" flow, where an admin is configuring a brand-new server that is
+    not yet in the allowlist.
     """
     if os.getenv("MOCK_AUTH", "0") == "1":
         return {"success": True, "user": username or "windows_user"}
 
-    if not _server_allowed(server):
+    if enforce_allowlist and not _server_allowed(server):
         return {"success": False, "error": "Database server is not in the allowed list"}
 
     if _has_connstr_injection(server, database, username, password):

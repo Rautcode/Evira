@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  BarChart3, FileText, Settings, Activity, FileWarning, Mail, CalendarClock, HelpCircle, UserCircle, ChevronsLeft, ChevronsRight
+  BarChart3, FileText, Settings, Activity, FileWarning, Mail, CalendarClock, HelpCircle, UserCircle, ChevronsLeft, ChevronsRight, Wand2
 } from 'lucide-react';
 
 import {
@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: BarChart3 }, // Changed icon to BarChart3 for Dashboard
+  { href: '/setup', label: 'Setup', icon: Wand2 },
   { href: '/report-generator', label: 'Report Generator', icon: BarChart3 },
   { href: '/templates', label: 'Templates', icon: FileText },
   { href: '/settings', label: 'Settings', icon: Settings },

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
-import { login } from "@/lib/api";
+import { login, getSetupStatus } from "@/lib/api";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,8 +29,17 @@ export function LoginForm() {
       if (res?.data?.success && res.data.token) {
         localStorage.setItem("auth_token", res.data.token);
         document.cookie = `auth_token=${res.data.token}; path=/; max-age=86400; SameSite=Lax`;
-        toast({ title: "Welcome back", description: "Redirecting to your dashboard…" });
-        router.push("/dashboard");
+        // New users (system not configured) go through the guided setup; others
+        // land on the dashboard.
+        let destination = "/dashboard";
+        try {
+          const s = await getSetupStatus();
+          if (!s.data?.completed) destination = "/setup";
+        } catch {
+          /* default to dashboard */
+        }
+        toast({ title: "Welcome back", description: destination === "/setup" ? "Let's finish setting up…" : "Redirecting to your dashboard…" });
+        router.push(destination);
       } else {
         throw new Error(res?.data?.detail || "Invalid response from server");
       }

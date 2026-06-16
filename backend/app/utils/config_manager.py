@@ -32,4 +32,12 @@ class ConfigManager:
             logger.error(f"Failed to save system config: {e}")
             raise e
 
+    @staticmethod
+    def update_config(partial: dict) -> dict:
+        """Merge partial keys into the existing config (does not overwrite the rest)."""
+        config = ConfigManager.load_config()
+        config.update(partial)
+        ConfigManager.save_config(config)
+        return config
+
 config_manager = ConfigManager()

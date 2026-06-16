@@ -6,7 +6,7 @@ import logging
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import (
-    dashboard, websocket, auth, charts, email, logger, report, scheduler, template, system_settings, tag_mapping
+    dashboard, websocket, auth, charts, email, logger, report, scheduler, template, system_settings, tag_mapping, setup
 )
 from app.core.events import startup_event, shutdown_event
 from app.core.security import get_current_user
@@ -61,3 +61,4 @@ app.include_router(scheduler.router, dependencies=_protected)
 app.include_router(template.router, dependencies=_protected)
 app.include_router(system_settings.router, dependencies=_protected)
 app.include_router(tag_mapping.router, dependencies=_protected)
+app.include_router(setup.router, dependencies=_protected)

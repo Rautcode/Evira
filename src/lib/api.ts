@@ -136,5 +136,10 @@ export const updateTagMappingRule = (id: number, data: any) => api.put(`/tag-map
 export const deleteTagMappingRule = (id: number) => api.delete(`/tag-mapping/${id}`);
 export const reloadTagMapping = () => api.post('/tag-mapping/reload');
 
+// --- Setup / Onboarding ---
+export const testConnection = (data: any) => api.post('/system-settings/test', data);
+export const getSetupStatus = () => api.get('/setup/status');
+export const completeSetup = () => api.post('/setup/complete');
+
 export default api;
 
