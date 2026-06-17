@@ -9,7 +9,7 @@ from app.routers import (
     dashboard, websocket, auth, charts, email, logger, report, scheduler, template, system_settings, tag_mapping, setup
 )
 from app.core.events import startup_event, shutdown_event
-from app.core.security import get_current_user
+from app.core.security import get_current_user, require_role
 
 # Configure logging
 logging.basicConfig(
@@ -38,6 +38,8 @@ app.add_middleware(
 # Routers that require a valid Bearer token. Auth (login/logout) stays public,
 # and websocket routes handle their own auth at connect time.
 _protected = [Depends(get_current_user)]
+# Configuration surfaces require engineer or admin (RBAC).
+_engineer = [Depends(require_role("engineer"))]
 
 # Register event handlers. These must be coroutine functions so Starlette
 # awaits them — a sync lambda returning a coroutine is never awaited.
@@ -59,6 +61,6 @@ app.include_router(logger.router, dependencies=_protected)
 app.include_router(report.router, dependencies=_protected)
 app.include_router(scheduler.router, dependencies=_protected)
 app.include_router(template.router, dependencies=_protected)
-app.include_router(system_settings.router, dependencies=_protected)
-app.include_router(tag_mapping.router, dependencies=_protected)
+app.include_router(system_settings.router, dependencies=_engineer)
+app.include_router(tag_mapping.router, dependencies=_engineer)
 app.include_router(setup.router, dependencies=_protected)

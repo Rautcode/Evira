@@ -57,6 +57,30 @@ def get_current_user(
     return decode_token(credentials.credentials)
 
 
+ROLE_RANK = {"operator": 1, "engineer": 2, "admin": 3}
+
+
+def require_role(min_role: str):
+    """Dependency factory: require the user's role to be >= min_role.
+
+    Role hierarchy: operator < engineer < admin. Used to gate configuration and
+    destructive endpoints to engineers/admins while leaving read-only/reporting
+    access open to all authenticated users.
+    """
+    min_rank = ROLE_RANK.get(min_role, 99)
+
+    def checker(user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, Any]:
+        rank = ROLE_RANK.get(str(user.get("role") or "operator").lower(), 0)
+        if rank < min_rank:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"This action requires the '{min_role}' role or higher",
+            )
+        return user
+
+    return checker
+
+
 def verify_ws_token(token: str | None) -> Dict[str, Any] | None:
     """Validate a WebSocket token (passed as a query param, since browsers
     cannot set an Authorization header on WS). Returns claims or None."""
