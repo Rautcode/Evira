@@ -38,11 +38,21 @@ services:
       MSSQL_ALLOWED_SERVERS: db
       CORS_ALLOW_ORIGINS: http://localhost:3000
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-1}
+      OPC_UA_SERVER_URL: ${OPC_UA_SERVER_URL:-opc.tcp://opcua-sim:4840/freeopcua/server/}
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
+      opcua-sim:
+        condition: service_started
+
+  opcua-sim:
+    build: ./backend
+    container_name: scada-opcua-sim
+    command: ["python", "opcua_simulator.py"]
+    ports:
+      - "4840:4840"
 
   frontend:
     build:
