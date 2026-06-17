@@ -375,7 +375,32 @@ class ReportService:
         else:
             pdf.set_font("helvetica", "", 12)
             pdf.cell(0, 10, "No data available for the selected timeframe.", new_x="LMARGIN", new_y="NEXT")
-            
+
+        # --- DATA PROVENANCE (audit / tamper-evidence) ---
+        lin = context.get('lineage') or {}
+        if lin:
+            box_y = max(pdf.get_y() + 8, 196)
+            pdf.set_draw_color(203, 213, 225)
+            pdf.set_fill_color(248, 250, 252)
+            pdf.rect(10, box_y, 190, 48, 'FD')
+            pdf.set_xy(14, box_y + 4)
+            pdf.set_font("helvetica", "B", 11)
+            pdf.set_text_color(30, 41, 59)
+            pdf.cell(0, 6, "Data provenance", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("helvetica", "", 9)
+            pdf.set_text_color(71, 85, 105)
+            dr = lin.get('date_range', {})
+            rows = [
+                f"Rows analyzed: {lin.get('row_count')}    |    Period: {dr.get('start')} to {dr.get('end')}",
+                f"Generated: {lin.get('generated_at')}    by: {lin.get('generated_by')}",
+                f"Source: {str(lin.get('source', ''))[:118]}",
+                f"Content SHA-256: {lin.get('content_sha256', '')}",
+            ]
+            for i, txt in enumerate(rows):
+                pdf.set_xy(14, box_y + 13 + i * 8)
+                pdf.cell(0, 5, txt, new_x="LMARGIN", new_y="NEXT")
+            pdf.set_text_color(0, 0, 0)
+
         # --- 3. ADVANCED ANALYTICS (CHARTS) ---
         if chart_path and os.path.exists(chart_path):
             pdf.add_page()
@@ -436,17 +461,44 @@ class ReportService:
         res = self.fetch_data(date_range, machine_id, shift, report_type)
         return res["raw"]
 
-    def generate_report(self, date_range: Dict[str, str], machine_id: str, shift: str, report_type: str, template_id: str, output_type: str = 'pdf', with_chart: bool = False) -> str:
+    def generate_report(self, date_range: Dict[str, str], machine_id: str, shift: str, report_type: str, template_id: str, output_type: str = 'pdf', with_chart: bool = False, generated_by: str = "System") -> str:
         os.makedirs(REPORTS_DIR, exist_ok=True)
         data_res = self.fetch_data(date_range, machine_id, shift, report_type)
-        
+        raw = data_res["raw"]
+
+        # --- Data lineage / provenance (audit + tamper-evidence) ---
+        import hashlib
+        import json as _json
+        content_hash = hashlib.sha256(
+            _json.dumps(raw, sort_keys=True, default=str).encode("utf-8")
+        ).hexdigest()
+        self.last_lineage = {
+            "report_type": report_type,
+            "machine_id": machine_id,
+            "shift": shift,
+            "date_range": date_range,
+            "row_count": len(raw),
+            "template_id": template_id,
+            "generated_by": generated_by,
+            "generated_at": datetime.now().isoformat(timespec="seconds"),
+            "content_sha256": content_hash,
+            "source": (
+                "SELECT * FROM logs WHERE timestamp BETWEEN "
+                f"'{date_range.get('start')}' AND '{date_range.get('end')}'"
+                + ("" if machine_id.lower() == "all" else f" AND machine_id = '{machine_id}'")
+                + ("" if shift.lower() == "full" else f" AND shift = '{shift}'")
+                + ("" if report_type.lower() == "all" else f" AND report_type = '{report_type}'")
+            ),
+        }
+
         context = {
-            "data": data_res["raw"], 
+            "data": raw,
             "pivoted_data": data_res["pivoted"],
-            "machine_id": machine_id, 
-            "shift": shift, 
-            "date_range": date_range, 
-            "report_type": report_type
+            "machine_id": machine_id,
+            "shift": shift,
+            "date_range": date_range,
+            "report_type": report_type,
+            "lineage": self.last_lineage,
         }
         
         # Resolve the layout (per report type, overridable by the template JSON).

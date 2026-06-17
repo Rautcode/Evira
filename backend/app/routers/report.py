@@ -10,6 +10,8 @@ import pyodbc
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
+import json
+from app.core.security import get_current_user
 from app.services.report_service import ReportService
 from app.utils.db_connector import DBConnector
 from app.utils.error_handler import handle_db_error
@@ -46,7 +48,8 @@ class PreviewRequest(BaseModel):
     report_type: str
 
 @router.post("/generate")
-def generate_report(data: GenerateRequest = Body(...)):
+def generate_report(data: GenerateRequest = Body(...), current_user: dict = Depends(get_current_user)):
+    generated_by = current_user.get("user") or current_user.get("sub") or "System"
     service = ReportService(data.db_params)
     file_path = service.generate_report(
         date_range=data.date_range,
@@ -55,17 +58,19 @@ def generate_report(data: GenerateRequest = Body(...)):
         report_type=data.report_type,
         template_id=data.template_id,
         output_type=data.output_type,
-        with_chart=data.with_chart
+        with_chart=data.with_chart,
+        generated_by=generated_by,
     )
-    
-    # Save report generation history in database
+    lineage = getattr(service, "last_lineage", {}) or {}
+
+    # Save report generation history (with full data lineage) in database
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO report_history (report_type, template_id, parameters, status, file_path, created_by)
-                VALUES (?, ?, ?, 'success', ?, 'System')
-            """, (data.report_type, data.template_id, str(data.date_range), file_path))
+                VALUES (?, ?, ?, 'success', ?, ?)
+            """, (data.report_type, data.template_id, json.dumps(lineage, default=str), file_path, generated_by))
             conn.commit()
             cursor.close()
     except Exception as e:
