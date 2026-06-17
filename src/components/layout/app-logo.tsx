@@ -37,7 +37,7 @@ export function AppLogo({ className, iconSize = 28, textSize = "text-xl", href =
         />
       </div>
       <span className={`font-black ${textSize} tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400`}>
-        SCADA Assistant
+        Evira
       </span>
     </Link>
   );

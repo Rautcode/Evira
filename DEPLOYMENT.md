@@ -1,4 +1,4 @@
-# Deployment Guide — SCADA Reports Studio
+# Deployment Guide — Evira
 
 This stack ships as three containers: **db** (SQL Server 2022), **backend**
 (FastAPI), and **frontend** (Next.js). It can run as a central web app *or*

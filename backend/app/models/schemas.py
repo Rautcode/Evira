@@ -1,4 +1,4 @@
-"""Model schemas for the SCADA Assistant application."""
+"""Model schemas for the Evira application."""
 
 from pydantic import BaseModel
 from typing import Dict, List, Optional

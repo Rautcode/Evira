@@ -46,3 +46,10 @@ backend/_type_*.pdf
 stack_report.pdf
 dev-preview.cmd
 backend/audit_full.py
+
+# TLS certificates (generated locally — never commit private keys)
+nginx/certs/*.key
+nginx/certs/*.crt
+
+# DB backups (large binaries)
+backups/*.bak

@@ -45,7 +45,12 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
 @router.get("/me")
 def get_me(current_user: dict = Depends(get_current_user)):
     """Return the currently authenticated user (frontend calls this on load)."""
-    return {"success": True, "user": current_user.get("user"), "username": current_user.get("sub")}
+    return {
+        "success": True,
+        "user": current_user.get("user"),
+        "username": current_user.get("sub"),
+        "role": current_user.get("role", "operator"),
+    }
 
 @router.post("/logout")
 def logout():

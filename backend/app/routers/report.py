@@ -83,8 +83,8 @@ def generate_report(data: GenerateRequest = Body(...), current_user: dict = Depe
             recipients_list = [r.strip() for r in data.recipients.split(",") if r.strip()]
             for recipient in recipients_list:
                 email_service.send_email(
-                    subject=f"SCADA Report - {data.report_type.replace('_', ' ').capitalize()}",
-                    body=data.email_message or "Please find the attached SCADA report.",
+                    subject=f"Evira Report - {data.report_type.replace('_', ' ').capitalize()}",
+                    body=data.email_message or "Please find the attached Evira report.",
                     to_email=recipient,
                     attachment_path=file_path
                 )
@@ -131,10 +131,11 @@ def list_reports():
         with get_db_connection() as conn:
             cursor = conn.cursor()
             query = """
-                SELECT 
+                SELECT
                     id,
                     report_type,
                     template_id,
+                    parameters,
                     status,
                     created_at,
                     file_path,
@@ -146,6 +147,11 @@ def list_reports():
             reports = []
             for row in cursor.fetchall():
                 filename = os.path.basename(row.file_path) if row.file_path else f"report_{row.id}.pdf"
+                lineage = {}
+                try:
+                    lineage = json.loads(row.parameters) if row.parameters else {}
+                except Exception:
+                    pass
                 reports.append({
                     "id": str(row.id),
                     "name": f"{row.report_type.replace('_', ' ').capitalize()} Report",
@@ -153,7 +159,8 @@ def list_reports():
                     "created_at": row.created_at.isoformat() if row.created_at else None,
                     "status": row.status,
                     "filename": filename,
-                    "created_by": row.created_by
+                    "created_by": row.created_by,
+                    "lineage": lineage,
                 })
             cursor.close()
             return reports

@@ -1,6 +1,6 @@
-# SCADA Report Generator — Production Plan & Roadmap
+# Evira — Production Plan & Roadmap
 
-**Target product:** `scada-reports-studio` (Version B — the web/FastAPI codebase)
+**Target product:** `evira` (Version B — the web/FastAPI codebase)
 **Owner:** Engineering team (Dev · QA · Quality/Compliance · Production/DevOps · OT)
 **Date:** 2026-06-15
 **Companion:** [`AUDIT.md`](./AUDIT.md) (decision record & gap analysis)

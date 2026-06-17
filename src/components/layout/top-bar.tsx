@@ -172,7 +172,7 @@ export function TopBar() {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="cursor-pointer" onClick={() => {
-              localStorage.removeItem('auth_token');
+              ['auth_token', 'auth_user', 'auth_role'].forEach(k => localStorage.removeItem(k));
               document.cookie = 'auth_token=; Max-Age=0; path=/;';
               window.location.href = '/login';
             }}>

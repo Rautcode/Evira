@@ -1,6 +1,6 @@
-# SCADA Assistant: Complete User Guide
+# Evira: Complete User Guide
 
-Welcome to the **SCADA Assistant**, your central command center for real-time factory telemetry monitoring, automated reporting, and machine diagnostics. 
+Welcome to **Evira**, your central command center for real-time factory telemetry monitoring, automated reporting, and machine diagnostics. 
 
 This guide will walk you through exactly how to connect this application to your real factory floor, generate your first report, and automate your workflows.
 
@@ -63,7 +63,7 @@ You can view the live, real-time values of your factory machines ticking up and 
 ---
 
 ## 4. Generating Reports
-The core feature of SCADA Assistant is converting raw telemetry into beautiful corporate PDF reports.
+The core feature of Evira is converting raw telemetry into beautiful corporate PDF reports.
 
 ### Step 4.1: Customizing Templates
 1. Click on **Templates** in the sidebar.

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, BackgroundTasks, Body, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Depends
+from app.core.security import require_role
 from pydantic import BaseModel
 from typing import Optional
 import logging
@@ -42,7 +43,7 @@ def get_settings():
         "password": ""  # Never return the password
     }
 
-@router.put("/settings")
+@router.put("/settings", dependencies=[Depends(require_role("engineer"))])
 def update_settings(data: SmtpSettings = Body(...)):
     email_service.save_config(
         host=data.host,

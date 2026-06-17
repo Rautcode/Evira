@@ -1,13 +1,18 @@
-# One-command launch for the full SCADA Reports stack:
-#   docker compose up --build
-# Then open http://localhost:3000  (API at http://localhost:8000/docs)
+# One-command launch for the full Evira stack:
+#   1. bash nginx/gen-certs.sh          (first time only — creates TLS cert)
+#   2. docker compose up --build
+# Then open https://localhost  (self-signed cert; accept the browser warning once)
+#
+# Direct ports are still exposed for local dev / health-checks:
+#   Frontend: http://localhost:3000
+#   Backend:  http://localhost:8000/docs
 #
 # Override secrets via a .env file next to this file (see .env.docker.example).
 
 services:
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: scada-db
+    container_name: evira-db
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-Scada!Pass2026}
@@ -25,7 +30,7 @@ services:
 
   backend:
     build: ./backend
-    container_name: scada-backend
+    container_name: evira-backend
     environment:
       JWT_SECRET: ${JWT_SECRET:-please-change-this-in-production}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
@@ -36,7 +41,7 @@ services:
       MSSQL_USERNAME: sa
       MSSQL_PASSWORD: ${MSSQL_SA_PASSWORD:-Scada!Pass2026}
       MSSQL_ALLOWED_SERVERS: db
-      CORS_ALLOW_ORIGINS: http://localhost:3000
+      CORS_ALLOW_ORIGINS: http://localhost:3000,https://localhost
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-1}
       OPC_UA_SERVER_URL: ${OPC_UA_SERVER_URL:-opc.tcp://opcua-sim:4840/freeopcua/server/}
     ports:
@@ -60,11 +65,25 @@ services:
       dockerfile: Dockerfile.frontend
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
-    container_name: scada-frontend
+    container_name: evira-frontend
     ports:
       - "3000:3000"
     depends_on:
       - backend
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: evira-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
 
 volumes:
   mssql_data:

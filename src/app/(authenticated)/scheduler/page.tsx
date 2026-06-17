@@ -13,8 +13,11 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth-context';
 
 export default function SchedulerPage() {
+  const { isAtLeast } = useAuth();
+  const canEdit = isAtLeast('engineer');
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const [scheduledTasks, setScheduledTasks] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -77,10 +80,12 @@ export default function SchedulerPage() {
           <h1 className="text-3xl font-black tracking-tight">Report Scheduler</h1>
           <p className="text-slate-500 dark:text-slate-400">Manage automated report generation and dispatch triggers.</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20">
-          <Plus className="mr-2 h-4 w-4" />
-          New Schedule
-        </Button>
+        {canEdit && (
+          <Button onClick={() => setIsModalOpen(true)} className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20">
+            <Plus className="mr-2 h-4 w-4" />
+            New Schedule
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

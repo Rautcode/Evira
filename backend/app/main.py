@@ -6,7 +6,7 @@ import logging
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import (
-    dashboard, websocket, auth, charts, email, logger, report, scheduler, template, system_settings, tag_mapping, setup
+    dashboard, websocket, auth, charts, email, logger, report, scheduler, template, system_settings, tag_mapping, setup, users
 )
 from app.core.events import startup_event, shutdown_event
 from app.core.security import get_current_user, require_role
@@ -18,8 +18,8 @@ logging.basicConfig(
 )
 
 app = FastAPI(
-    title="SCADA Assistant API",
-    description="API for SCADA Assistant application",
+    title="Evira API",
+    description="Evira — Enterprise Plant Intelligence Platform",
     version="1.0.0"
 )
 
@@ -64,3 +64,9 @@ app.include_router(template.router, dependencies=_protected)
 app.include_router(system_settings.router, dependencies=_engineer)
 app.include_router(tag_mapping.router, dependencies=_engineer)
 app.include_router(setup.router, dependencies=_protected)
+app.include_router(users.router, dependencies=_protected)
+
+@app.get("/health", tags=["meta"])
+def health():
+    """Liveness probe — no auth required."""
+    return {"status": "ok"}

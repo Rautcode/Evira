@@ -123,6 +123,7 @@ export const getChartData = (params: any) => api.get('/charts/', { params });
 // --- MSSQL/WinCC ---
 export const getMachineList = () => api.get('/report/machines');
 export const getDashboardStats = () => api.get('/dashboard/stats');
+export const getDashboardAlerts = () => api.get('/dashboard/alerts');
 export const getScadaTags = () => api.get('/dashboard/scada/tags');
 
 // --- System Configuration ---
@@ -140,6 +141,12 @@ export const reloadTagMapping = () => api.post('/tag-mapping/reload');
 export const testConnection = (data: any) => api.post('/system-settings/test', data);
 export const getSetupStatus = () => api.get('/setup/status');
 export const completeSetup = () => api.post('/setup/complete');
+
+// --- User Management (admin only) ---
+export const getUsers = () => api.get('/users');
+export const createUser = (data: { username: string; password: string; role: string }) => api.post('/users', data);
+export const updateUser = (id: number, data: { role: string; active: boolean; password?: string }) => api.put(`/users/${id}`, data);
+export const deactivateUser = (id: number) => api.delete(`/users/${id}`);
 
 export default api;
 

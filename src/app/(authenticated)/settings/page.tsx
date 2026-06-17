@@ -13,6 +13,7 @@ import {
 import { getScadaTags, getDashboardStats, getSmtpSettings, updateSmtpSettings, getSystemSettings, updateSystemSettings } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { TagMappingManager } from '@/components/settings/tag-mapping-manager';
+import { useAuth } from '@/context/auth-context';
 
 interface ScadaTag {
   id: number;
@@ -40,6 +41,8 @@ interface SystemStatus {
 }
 
 export default function SettingsPage() {
+  const { isAtLeast } = useAuth();
+  const canEdit = isAtLeast('engineer');
   const [tags, setTags] = React.useState<ScadaTag[]>([]);
   const [systemStatus, setSystemStatus] = React.useState<SystemStatus | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -554,7 +557,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Tag Mapping Rules (no-code OPC UA tag -> machine/parameter mapping) */}
-      <TagMappingManager />
+      <TagMappingManager canEdit={canEdit} />
 
       {/* SMTP Configuration Form */}
       <Card className="shadow-md border-border bg-card">
@@ -585,7 +588,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className="mt-6 flex justify-end">
-            <Button onClick={handleSaveSmtp} disabled={savingSmtp}>
+            <Button onClick={handleSaveSmtp} disabled={savingSmtp || !canEdit} title={!canEdit ? 'Engineer or Admin role required' : undefined}>
               {savingSmtp ? 'Saving...' : <><Save className="w-4 h-4 mr-2" /> Save SMTP Configuration</>}
             </Button>
           </div>
@@ -665,7 +668,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex justify-end pt-2 pb-8">
-        <Button size="lg" onClick={handleSaveSystemSettings} disabled={savingSystem} className="w-full md:w-auto shadow-lg hover:shadow-xl transition-shadow bg-blue-600 hover:bg-blue-700 text-white">
+        <Button size="lg" onClick={handleSaveSystemSettings} disabled={savingSystem || !canEdit} title={!canEdit ? 'Engineer or Admin role required' : undefined} className="w-full md:w-auto shadow-lg hover:shadow-xl transition-shadow bg-blue-600 hover:bg-blue-700 text-white">
           {savingSystem ? 'Applying New Configuration...' : <><KeyRound className="w-5 h-5 mr-2" /> Connect Systems & Hot-Reload</>}
         </Button>
       </div>

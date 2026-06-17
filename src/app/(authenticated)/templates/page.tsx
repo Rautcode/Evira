@@ -12,8 +12,11 @@ import { Label } from '@/components/ui/label';
 import { FileCode2, MoreVertical, Plus, Search, Edit2, Copy, Trash2, Tag, UploadCloud, Save } from 'lucide-react';
 import { getTemplates, createTemplate, deleteTemplate } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth-context';
 
 export default function TemplatesPage() {
+  const { isAtLeast } = useAuth();
+  const canEdit = isAtLeast('engineer');
   const [searchTerm, setSearchTerm] = React.useState('');
   const [templates, setTemplates] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -87,16 +90,18 @@ export default function TemplatesPage() {
           <h1 className="text-3xl font-black tracking-tight">Template Designer</h1>
           <p className="text-slate-500 dark:text-slate-400">Manage and upload your SCADA report templates.</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" className="rounded-xl border-slate-300 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800">
-            <UploadCloud className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" />
-            Upload Template
-          </Button>
-          <Button onClick={handleCreateNew} className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20">
-            <Plus className="mr-2 h-4 w-4" />
-            Create New
-          </Button>
-        </div>
+        {canEdit && (
+          <div className="flex gap-3">
+            <Button variant="outline" className="rounded-xl border-slate-300 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800">
+              <UploadCloud className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" />
+              Upload Template
+            </Button>
+            <Button onClick={handleCreateNew} className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20">
+              <Plus className="mr-2 h-4 w-4" />
+              Create New
+            </Button>
+          </div>
+        )}
       </div>
 
       <Card className="glass-card-premium border-slate-200/50 dark:border-slate-800/40 shadow-xl">
@@ -160,24 +165,28 @@ export default function TemplatesPage() {
                     <TableCell className="text-slate-500 text-sm">{template.description || 'N/A'}</TableCell>
                     <TableCell className="text-slate-500 text-sm">--</TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
-                            <MoreVertical className="h-4 w-4 text-slate-500" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40 rounded-xl border-slate-200 dark:border-slate-800">
-                          <DropdownMenuItem onClick={() => handleEdit(template)} className="cursor-pointer text-xs font-medium">
-                            <Edit2 className="mr-2 h-3.5 w-3.5 text-blue-500" /> Edit Design
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer text-xs font-medium">
-                            <Copy className="mr-2 h-3.5 w-3.5 text-slate-500" /> Duplicate
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDelete(template.id)} className="cursor-pointer text-xs font-medium text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400">
-                            <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {canEdit ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
+                              <MoreVertical className="h-4 w-4 text-slate-500" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40 rounded-xl border-slate-200 dark:border-slate-800">
+                            <DropdownMenuItem onClick={() => handleEdit(template)} className="cursor-pointer text-xs font-medium">
+                              <Edit2 className="mr-2 h-3.5 w-3.5 text-blue-500" /> Edit Design
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer text-xs font-medium">
+                              <Copy className="mr-2 h-3.5 w-3.5 text-slate-500" /> Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDelete(template.id)} className="cursor-pointer text-xs font-medium text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400">
+                              <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">View only</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))

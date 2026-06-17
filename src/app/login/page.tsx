@@ -23,7 +23,7 @@ export default function LoginPage() {
                 Welcome back
               </h1>
               <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                Log in to your SCADA workspace
+                Log in to your Evira workspace
               </p>
             </div>
           </div>
@@ -33,7 +33,7 @@ export default function LoginPage() {
           </div>
 
           <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-900 flex flex-col items-center justify-center space-y-1">
-            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">SCADA Assistant v1.2.0</p>
+            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Evira v1.2.0</p>
             <p className="text-[10px] text-slate-400 dark:text-slate-500">Enterprise Automation Report Engine</p>
           </div>
         </div>

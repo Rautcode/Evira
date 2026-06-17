@@ -11,6 +11,11 @@ from app.utils.config_manager import config_manager
 
 logger = logging.getLogger(__name__)
 
+# How often (seconds) the historian buffer is flushed to the DB.
+_FLUSH_INTERVAL = 5
+# Max rows buffered before an early flush regardless of time.
+_FLUSH_MAX_ROWS = 200
+
 class OPCSubHandler:
     """Subscription Handler for OPC UA Data Change Notifications."""
     
@@ -30,13 +35,17 @@ class WinCCMonitor:
         self._total_tags = 0
         self._last_update = None
         self._monitor_task = None
+        self._flush_task = None
         self.client = None
         self.subscription = None
-        
+
         self.load_config()
-        
+
         # Store auto-discovered tags: {"node": Node, "id": str, "display_name": str, "machine_id": str, "parameter": str, "unit": str}
         self.discovered_nodes = []
+        # Historian write buffer: list of (machine_id, shift, report_type, parameter, value, unit, status)
+        self._log_buffer: List[tuple] = []
+        self._tag_buffer: Dict[str, float] = {}  # node_id -> latest value (deduplicated)
 
     def load_config(self):
         """Load connection settings dynamically."""
@@ -50,9 +59,16 @@ class WinCCMonitor:
         if not self._monitor_task:
             self._monitor_task = asyncio.create_task(self._monitor_loop())
             logger.info("WinCC OPC UA monitoring service started")
+        if not self._flush_task:
+            self._flush_task = asyncio.create_task(self._flush_loop())
+            logger.info("Historian write-buffer flush task started")
 
     async def stop(self):
         """Stop the WinCC monitoring background task."""
+        if self._flush_task:
+            self._flush_task.cancel()
+            self._flush_task = None
+            await self._flush_buffers()  # drain remaining buffered rows on clean shutdown
         if self._monitor_task:
             self._monitor_task.cancel()
             self._monitor_task = None
@@ -203,56 +219,40 @@ class WinCCMonitor:
             logger.error(f"Failed to setup OPC UA subscription: {e}")
 
     async def handle_tag_change(self, node, val, data):
-        """Process real-time OPC UA tag change notifications."""
+        """Process real-time OPC UA tag change notifications.
+
+        Tag-value writes are debounced (latest value wins per node_id), and
+        log rows are buffered and flushed every _FLUSH_INTERVAL seconds to
+        avoid opening a DB connection on every OPC UA notification.
+        """
         node_id_str = str(node.nodeid)
         tag_info = next((t for t in self.discovered_nodes if t["id"] == node_id_str), None)
         if not tag_info:
             return
-            
+
         self._last_update = datetime.now()
-        
-        # 1. Update tag values table
-        try:
-            with get_db_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    UPDATE wincc_tags
-                    SET value = ?, quality = 'Good', last_update = GETDATE()
-                    WHERE tag_name = ?
-                """, (float(val), node_id_str))
-                conn.commit()
-                cursor.close()
-        except Exception as e:
-            logger.error(f"DB tag update failed: {e}")
 
-        # 2. Append telemetry log snapshots for reporting
-        try:
-            hour = datetime.now().hour
-            if 6 <= hour < 14:
-                shift = "Morning"
-            elif 14 <= hour < 22:
-                shift = "Evening"
-            else:
-                shift = "Night"
-                
-            status = "Normal"
-            if tag_info["parameter"] == "Temperature" and (val > 220 or val < 180):
-                status = "Warning"
-            elif tag_info["parameter"] == "Pressure" and (val > 120 or val < 80):
-                status = "Warning"
+        # 1. Debounce tag-value updates (latest value per tag; flushed in batch)
+        self._tag_buffer[node_id_str] = float(val)
 
-            with get_db_connection() as conn:
-                cursor = conn.cursor()
-                # Insert logs for all report types
-                for report_type in ['production_summary', 'downtime_analysis', 'quality_metrics']:
-                    cursor.execute("""
-                        INSERT INTO logs (machine_id, shift, timestamp, report_type, parameter, value, unit, status)
-                        VALUES (?, ?, GETDATE(), ?, ?, ?, ?, ?)
-                    """, (tag_info["machine_id"], shift, report_type, tag_info["parameter"], float(val), tag_info["unit"], status))
-                conn.commit()
-                cursor.close()
-        except Exception as e:
-            logger.error(f"DB telemetry logging failed: {e}")
+        # 2. Buffer historian log rows
+        hour = datetime.now().hour
+        shift = "Morning" if 6 <= hour < 14 else ("Evening" if 14 <= hour < 22 else "Night")
+        status = "Normal"
+        if tag_info["parameter"] == "Temperature" and (val > 220 or val < 180):
+            status = "Warning"
+        elif tag_info["parameter"] == "Pressure" and (val > 120 or val < 80):
+            status = "Warning"
+
+        for report_type in ('production_summary', 'downtime_analysis', 'quality_metrics'):
+            self._log_buffer.append((
+                tag_info["machine_id"], shift, report_type,
+                tag_info["parameter"], float(val), tag_info["unit"], status,
+            ))
+
+        # Early flush when buffer is large
+        if len(self._log_buffer) >= _FLUSH_MAX_ROWS:
+            await self._flush_buffers()
 
         # 3. Broadcast to frontend WebSockets
         try:
@@ -267,6 +267,64 @@ class WinCCMonitor:
                     "parameter": tag_info["parameter"],
                     "value": float(val),
                     "machine_id": tag_info["machine_id"]
+                }
+            })
+        except Exception:
+            pass
+
+    # ---- write-buffer helpers ----
+
+    async def _flush_loop(self):
+        """Background task: flush historian buffer every _FLUSH_INTERVAL seconds."""
+        while True:
+            await asyncio.sleep(_FLUSH_INTERVAL)
+            await self._flush_buffers()
+
+    async def _flush_buffers(self):
+        """Write buffered tag-value updates and historian log rows to SQL Server."""
+        tag_snapshot, self._tag_buffer = self._tag_buffer, {}
+        log_snapshot, self._log_buffer = self._log_buffer, []
+
+        if not tag_snapshot and not log_snapshot:
+            return
+
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                # Batch tag-value updates
+                for node_id_str, fval in tag_snapshot.items():
+                    cursor.execute(
+                        "UPDATE wincc_tags SET value=?, quality='Good', last_update=GETDATE() WHERE tag_name=?",
+                        (fval, node_id_str),
+                    )
+                # Batch historian log inserts using executemany
+                if log_snapshot:
+                    cursor.executemany(
+                        "INSERT INTO logs (machine_id, shift, timestamp, report_type, parameter, value, unit, status) "
+                        "VALUES (?, ?, GETDATE(), ?, ?, ?, ?, ?)",
+                        log_snapshot,
+                    )
+                conn.commit()
+                cursor.close()
+            logger.debug(
+                f"Historian flush: {len(tag_snapshot)} tag updates, {len(log_snapshot)} log rows"
+            )
+        except Exception as e:
+            logger.error(f"Historian flush failed: {e}")
+            # Re-queue on failure so rows aren't silently dropped
+            self._tag_buffer.update(tag_snapshot)
+            self._log_buffer.extend(log_snapshot)
+            return
+
+        # Push a lightweight dashboard update so the live-stats panel refreshes
+        try:
+            from app.core.websocket import manager as ws_manager
+            await ws_manager.broadcast_dashboard_update({
+                "wincc": {
+                    "connected": self._connected,
+                    "total_tags": self._total_tags,
+                    "active_tags": self._active_tags,
+                    "last_update": self._last_update.isoformat() if self._last_update else None,
                 }
             })
         except Exception:

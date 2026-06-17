@@ -1,4 +1,4 @@
-# SCADA Reports Studio — Defect Register (Version B)
+# Evira — Defect Register (Version B)
 
 **Source:** end-to-end audit + backend import run + multi-file code review (2026-06-15).
 **Legend:** 🔴 High · 🟠 Medium · 🟡 Low · ✅ Fixed · ⬜ Open

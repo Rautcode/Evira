@@ -28,6 +28,8 @@ export function LoginForm() {
       const res = await login({ username: username.trim(), password });
       if (res?.data?.success && res.data.token) {
         localStorage.setItem("auth_token", res.data.token);
+        localStorage.setItem("auth_user", res.data.user || username.trim());
+        localStorage.setItem("auth_role", res.data.role || "operator");
         document.cookie = `auth_token=${res.data.token}; path=/; max-age=86400; SameSite=Lax`;
         // New users (system not configured) go through the guided setup; others
         // land on the dashboard.

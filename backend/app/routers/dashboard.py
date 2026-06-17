@@ -72,6 +72,34 @@ def get_activity_feed(limit: int = Query(10, ge=1, le=100)):
         logger.exception("Failed to fetch activity feed")
         raise HTTPException(status_code=500, detail="Failed to load activity feed")
 
+@router.get("/alerts")
+def get_active_alerts(limit: int = Query(20, ge=1, le=100)):
+    """Return the most recent Warning/Error log rows for the alert strip."""
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT TOP (?) machine_id, parameter, value, unit, status, timestamp
+                FROM logs
+                WHERE status IN ('Warning', 'Error')
+                ORDER BY timestamp DESC
+            """, limit)
+            alerts = []
+            for row in cursor.fetchall():
+                alerts.append({
+                    "machine_id": row.machine_id,
+                    "parameter": row.parameter,
+                    "value": float(row.value) if row.value is not None else None,
+                    "unit": row.unit or "",
+                    "status": row.status,
+                    "timestamp": row.timestamp.isoformat() if row.timestamp else None,
+                })
+            cursor.close()
+            return alerts
+    except Exception as e:
+        logger.exception("Failed to fetch alerts")
+        raise HTTPException(status_code=500, detail="Failed to fetch alerts")
+
 @router.get("/scada/tags")
 def get_scada_tags():
     """Get all discovered and configured SCADA tags from the database."""

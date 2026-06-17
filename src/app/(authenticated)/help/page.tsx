@@ -14,7 +14,7 @@ export default function HelpPage() {
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            Find answers to common questions, tutorials, and detailed documentation for SCADA Assistant
+            Find answers to common questions, tutorials, and detailed documentation for Evira
             features in this section.
           </p>
           <div className="mt-6 p-8 border-2 border-dashed border-border rounded-lg text-center">

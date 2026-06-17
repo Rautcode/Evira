@@ -40,9 +40,14 @@ with TestClient(app) as client:
     token = r.json().get("token") if r.status_code == 200 else None
     h = {"Authorization": f"Bearer {token}"} if token else {}
 
-    # 3. /auth/me
+    # 3a. /health (unauthenticated liveness probe)
+    r = client.get("/health")
+    check("/health unauthenticated", r.status_code == 200, f"status={r.status_code} body={r.text[:60]}")
+
+    # 3b. /auth/me returns role field
     r = client.get("/auth/me", headers=h)
-    check("/auth/me", r.status_code == 200, f"status={r.status_code} body={r.text[:120]}")
+    body = r.json() if r.status_code == 200 else {}
+    check("/auth/me returns role", r.status_code == 200 and "role" in body, f"status={r.status_code} keys={list(body.keys())}")
 
     # 4. Dashboard stats (real DB reads)
     r = client.get("/dashboard/stats", headers=h)
@@ -73,6 +78,23 @@ with TestClient(app) as client:
     # 10. Path traversal blocked on chart download
     r = client.get("/charts/download/..%2f..%2fmain.py", headers=h)
     check("charts traversal blocked", r.status_code in (400, 404), f"status={r.status_code}")
+
+    # 11. GET /users — admin token must succeed, operator token must get 403
+    r = client.get("/users", headers=h)  # h is admin
+    check("/users admin 200", r.status_code == 200, f"status={r.status_code}")
+
+    op_login = client.post("/auth/login", json={"username": "operator", "password": "operator123"})
+    if op_login.status_code == 200 and op_login.json().get("token"):
+        op_h = {"Authorization": f"Bearer {op_login.json()['token']}"}
+        r = client.get("/users", headers=op_h)
+        check("/users operator 403", r.status_code == 403, f"status={r.status_code}")
+    else:
+        check("/users operator 403", False, "operator user not found — seed may need updating")
+
+    # 12. GET /dashboard/alerts — returns a list (may be empty)
+    r = client.get("/dashboard/alerts", headers=h)
+    ok = r.status_code == 200 and isinstance(r.json(), list)
+    check("dashboard alerts list", ok, f"status={r.status_code} type={type(r.json()).__name__ if r.status_code==200 else '-'}")
 
 passed = sum(1 for _, ok, _ in results if ok)
 print(f"\n==== {passed}/{len(results)} checks passed ====")

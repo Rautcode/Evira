@@ -23,7 +23,7 @@ interface Rule {
   active: boolean;
 }
 
-export function TagMappingManager() {
+export function TagMappingManager({ canEdit = true }: { canEdit?: boolean }) {
   const [rules, setRules] = React.useState<Rule[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [reloading, setReloading] = React.useState(false);
@@ -139,11 +139,13 @@ export function TagMappingManager() {
                     {r.active ? 'Yes' : 'No'}
                   </Badge>
                 </TableCell>
-                <TableCell>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10" onClick={() => removeRule(r.id)} aria-label="Delete rule">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TableCell>
+                {canEdit && (
+                  <TableCell>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10" onClick={() => removeRule(r.id)} aria-label="Delete rule">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
@@ -170,8 +172,13 @@ export function TagMappingManager() {
         </Button>
       </CardHeader>
       <CardContent className="p-6 space-y-6">
-        {/* Add-rule form */}
-        <div className="flex flex-col lg:flex-row lg:items-end gap-3 p-4 rounded-lg border bg-muted/10">
+        {/* Add-rule form — engineer+ only */}
+        {!canEdit && (
+          <p className="text-xs text-muted-foreground border rounded p-3 bg-muted/10">
+            View-only mode. Engineer or Admin role is required to add or remove rules.
+          </p>
+        )}
+        {canEdit && <div className="flex flex-col lg:flex-row lg:items-end gap-3 p-4 rounded-lg border bg-muted/10">
           <div className="space-y-1">
             <label className="text-xs font-semibold text-muted-foreground">Rule type</label>
             <select
@@ -207,7 +214,7 @@ export function TagMappingManager() {
           <Button onClick={addRule} disabled={saving} className="h-10">
             <Plus className="h-4 w-4 mr-1" /> {saving ? 'Adding…' : 'Add Rule'}
           </Button>
-        </div>
+        </div>}
 
         {loading ? (
           <p className="text-sm text-muted-foreground text-center py-6">Loading rules…</p>

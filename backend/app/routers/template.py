@@ -1,10 +1,12 @@
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, Depends
 from app.services.template_service import TemplateService
+from app.core.security import require_role
 from typing import Dict, Any
 import uuid
 
 router = APIRouter(tags=["template"], prefix="/template")
 template_service = TemplateService()
+_eng = Depends(require_role("engineer"))
 
 @router.get("")
 @router.get("/")
@@ -21,8 +23,8 @@ def get_template(template_id: str):
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Template not found")
 
-@router.post("")
-@router.post("/")
+@router.post("", dependencies=[_eng])
+@router.post("/", dependencies=[_eng])
 def create_template(data: Dict[str, Any] = Body(...)):
     template_id = data.get("id") or str(uuid.uuid4())
     data["id"] = template_id
@@ -32,7 +34,7 @@ def create_template(data: Dict[str, Any] = Body(...)):
         raise HTTPException(status_code=400, detail="Invalid template id")
     return {"message": "Template created", "id": template_id}
 
-@router.put("/{template_id}")
+@router.put("/{template_id}", dependencies=[_eng])
 def edit_template(template_id: str, updates: Dict[str, Any] = Body(...)):
     try:
         template_service.edit_template(template_id, updates)
@@ -42,7 +44,7 @@ def edit_template(template_id: str, updates: Dict[str, Any] = Body(...)):
         raise HTTPException(status_code=404, detail="Template not found")
     return {"message": "Template updated"}
 
-@router.delete("/{template_id}")
+@router.delete("/{template_id}", dependencies=[_eng])
 def delete_template(template_id: str):
     try:
         template_service.delete_template(template_id)

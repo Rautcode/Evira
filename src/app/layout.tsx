@@ -16,8 +16,8 @@ const geistMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'SCADA Assistant',
-  description: 'Advanced SCADA Reporting and Assistance Tool',
+  title: 'Evira',
+  description: 'Evira — Enterprise Plant Intelligence Platform',
 };
 
 export default function RootLayout({

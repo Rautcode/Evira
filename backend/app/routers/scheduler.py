@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, HTTPException, Depends
+from app.core.security import require_role
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.triggers.cron import CronTrigger
@@ -21,6 +22,7 @@ jobstores = {
 }
 
 router = APIRouter(tags=["scheduler"], prefix="/scheduler")
+_eng = Depends(require_role("engineer"))
 # Created here but started in the app lifespan (app.core.events), not at import,
 # to avoid duplicate schedulers and give it a clean start/stop. NOTE: running
 # uvicorn with >1 worker still creates one scheduler per process — use a single
@@ -55,7 +57,8 @@ def job_wrapper(job_id, title, template_id, machine_id, report_type, recipients)
             report_type='scheduled',
             template_id=template_id,
             output_type=report_type,
-            with_chart=True
+            with_chart=True,
+            generated_by=f"Scheduler:{title}",
         )
         logging.info(f"[Job {job_id}] Report generated: {file_path}")
         
@@ -70,7 +73,7 @@ def job_wrapper(job_id, title, template_id, machine_id, report_type, recipients)
                 recipients_list = [r.strip() for r in recipients.split(",") if r.strip()]
                 for to_email in recipients_list:
                     email_service.send_email(
-                        subject=f"Scheduled SCADA Report: {title}",
+                        subject=f"Evira Scheduled Report: {title}",
                         body=f"Please find the attached automated report: {title}.",
                         to_email=to_email,
                         attachment_path=file_path
@@ -96,8 +99,8 @@ def list_jobs():
         })
     return jobs
 
-@router.post("")
-@router.post("/")
+@router.post("", dependencies=[_eng])
+@router.post("/", dependencies=[_eng])
 def add_job(data: ScheduleRequest = Body(...)):
     job_id = str(uuid.uuid4())
     try:
@@ -121,7 +124,7 @@ def add_job(data: ScheduleRequest = Body(...)):
     logging.info(f"[Job {job_id}] Scheduled with cron '{data.cron_expression}'")
     return {"message": "Job added", "job_id": job_id}
 
-@router.delete("/{job_id}")
+@router.delete("/{job_id}", dependencies=[_eng])
 def remove_job(job_id: str):
     if not scheduler.get_job(job_id):
         raise HTTPException(status_code=404, detail="Job not found")

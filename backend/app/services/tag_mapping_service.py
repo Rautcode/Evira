@@ -5,6 +5,7 @@ be pointed at any factory's WinCC naming without code changes. Rules are cached
 and reloaded on write.
 """
 
+import re
 import logging
 import threading
 from typing import Optional, List, Dict, Any
@@ -12,6 +13,21 @@ from typing import Optional, List, Dict, Any
 from app.utils.db import get_db_connection
 
 logger = logging.getLogger(__name__)
+
+
+def _tokenize(text: str) -> set:
+    """Split a tag name into lowercase word tokens.
+
+    Splits on non-alphanumerics AND camelCase / letter-digit boundaries so
+    'Packaging_Delta_ErrorRate' -> {packaging, delta, error, rate}. This lets
+    rule words match as whole tokens (so 'pack' no longer matches 'Packaging').
+    """
+    if not text:
+        return set()
+    spaced = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", text)
+    spaced = re.sub(r"(?<=[A-Za-z])(?=[0-9])", " ", spaced)
+    spaced = re.sub(r"(?<=[0-9])(?=[A-Za-z])", " ", spaced)
+    return {t for t in re.split(r"[^a-z0-9]+", spaced.lower()) if t}
 
 
 class TagMappingService:
@@ -60,17 +76,27 @@ class TagMappingService:
             return self._cache
 
     # ---- matching (used by the OPC UA discovery) ----
+    @staticmethod
+    def _matches(match: str, tokens: set, text_lower: str) -> bool:
+        # Single-word rules match a whole token (precise, avoids substring
+        # collisions). Multi-word rules fall back to substring on the full text.
+        if " " in match:
+            return match in text_lower
+        return match in tokens
+
     def match_machine(self, text: str) -> Optional[str]:
-        text = (text or "").lower()
+        text_lower = (text or "").lower()
+        tokens = _tokenize(text)
         for r in self.get_rules()["machine"]:
-            if r["match"] in text:
+            if self._matches(r["match"], tokens, text_lower):
                 return r["machine_id"]
         return None
 
     def match_parameter(self, text: str) -> Optional[Dict[str, Any]]:
-        text = (text or "").lower()
+        text_lower = (text or "").lower()
+        tokens = _tokenize(text)
         for r in self.get_rules()["parameter"]:
-            if r["match"] in text:
+            if self._matches(r["match"], tokens, text_lower):
                 return {"parameter": r["parameter"], "unit": r["unit"]}
         return None
 

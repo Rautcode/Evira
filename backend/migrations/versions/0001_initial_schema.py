@@ -1,6 +1,6 @@
 """initial schema
 
-Creates the full SCADA Reports schema (tables, indexes, stored procedures) by
+Creates the full Evira schema (tables, indexes, stored procedures) by
 running the project's known-good, idempotent SQL. Replaces the previous ad-hoc
 raw-SQL init so the schema is now versioned and deterministic (DEFECTS D42).
 
