@@ -83,13 +83,15 @@ with TestClient(app) as client:
     r = client.get("/users", headers=h)  # h is admin
     check("/users admin 200", r.status_code == 200, f"status={r.status_code}")
 
-    op_login = client.post("/auth/login", json={"username": "operator", "password": "operator123"})
+    # Create a temporary operator user via the admin API, then verify 403
+    client.post("/users", json={"username": "e2e_operator", "password": "E2eOp!123", "role": "operator"}, headers=h)
+    op_login = client.post("/auth/login", json={"username": "e2e_operator", "password": "E2eOp!123"})
     if op_login.status_code == 200 and op_login.json().get("token"):
         op_h = {"Authorization": f"Bearer {op_login.json()['token']}"}
         r = client.get("/users", headers=op_h)
         check("/users operator 403", r.status_code == 403, f"status={r.status_code}")
     else:
-        check("/users operator 403", False, "operator user not found — seed may need updating")
+        check("/users operator 403", False, f"failed to create/login e2e_operator: {op_login.status_code}")
 
     # 12. GET /dashboard/alerts — returns a list (may be empty)
     r = client.get("/dashboard/alerts", headers=h)
