@@ -31,6 +31,16 @@ check("tokenize: digit boundary", "zone" in toks and "1" in toks and "temp" in t
 
 check("tokenize: empty string", _tokenize("") == set())
 
+# Alphanumeric rule tokenization — "rx100" must split to {rx, 100}
+toks = _tokenize("rx100")
+check("tokenize: rx100 -> {rx, 100}", toks == {"rx", "100"}, str(toks))
+
+# Verify _matches uses subset logic for alphanumeric rules
+from app.services.tag_mapping_service import TagMappingService
+_m = TagMappingService._matches
+check("_matches: rx100 matches RX100_Temp", _m("rx100", _tokenize("RX100_Temperature"), "rx100_temperature"), "")
+check("_matches: rx100 does NOT match RX200_Temp", not _m("rx100", _tokenize("RX200_Temperature"), "rx200_temperature"), "")
+
 # ── 2. Seed data + default matching ─────────────────────────────────────────
 tag_mapping_service.invalidate()
 rules = tag_mapping_service.get_rules()

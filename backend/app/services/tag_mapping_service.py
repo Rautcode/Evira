@@ -78,11 +78,19 @@ class TagMappingService:
     # ---- matching (used by the OPC UA discovery) ----
     @staticmethod
     def _matches(match: str, tokens: set, text_lower: str) -> bool:
-        # Single-word rules match a whole token (precise, avoids substring
-        # collisions). Multi-word rules fall back to substring on the full text.
+        # Multi-word rules (space-separated phrases) fall back to substring
+        # match on the full lowercased text.
         if " " in match:
             return match in text_lower
-        return match in tokens
+        # Tokenize the rule itself so that alphanumeric names like "rx100" or
+        # "m001" split the same way as tag names do (rx100→{rx,100}).
+        # Then require every rule token to be present in the tag token set.
+        # This prevents "pack" matching "Packaging" AND ensures "rx100" matches
+        # "RX100_Temperature" but not "RX200_Temperature".
+        rule_tokens = _tokenize(match)
+        if not rule_tokens:
+            return False
+        return rule_tokens <= tokens
 
     def match_machine(self, text: str) -> Optional[str]:
         text_lower = (text or "").lower()
